@@ -1,50 +1,83 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEditor;
+using Functional;
 
 [CustomEditor(typeof(PiecewiseCubicLine))]
 public class LineInspector : Editor
 {
-	private const float lineWidth = 4.0f;
+	const float lineWidth = 4.0f;
+	PiecewiseCubicLine line;
+
+	//Global properties
+	Transform handleTransform;
+	Quaternion handleRotation;
+
+	void initAll()
+    {
+		line = target as PiecewiseCubicLine;
+		handleTransform = line.transform;
+		handleRotation = Tools.pivotRotation == PivotRotation.Local ?
+			handleTransform.rotation : Quaternion.identity;
+
+		//Line Color
+		Handles.color = Color.white;
+	}
 
 	private void OnSceneGUI()
 	{
-		PiecewiseCubicLine line = target as PiecewiseCubicLine;
+		initAll();
 
-		//Global properties
-		Transform handleTransform = line.transform;
-		Quaternion handleRotation = Tools.pivotRotation == PivotRotation.Local ?
-			handleTransform.rotation : Quaternion.identity;
+		HandleChangesToControlPoints();
 
-        //Line Color
-        Handles.color = Color.white;
+		//Draw line between each point in world space
+		Handles.DrawAAPolyLine(
+			lineWidth, Returns<Vector3>.Map(
+				line.GetRenderedPoints(),
+				GetPointPosInWorld
+			)
+		);
+	}
 
-        //Handle transformations for each point (and save for view)
-        int len = line.controlPoints.Length;
-		Vector3[] pis = new Vector3[len];
+	public void HandleChangesToControlPoints()
+    {
+		//Handle transformations for each point (and save for view)
+		int len = line.controlPoints.Length;
+
 		for (int i = 0; i < len; ++i)
-        {
-			Vector3 pi = handleTransform.TransformPoint(line.controlPoints[i]);
-
-			Handles.DoPositionHandle(pi, handleRotation);
-
-			EditorGUI.BeginChangeCheck();
-			pi = Handles.DoPositionHandle(pi, handleRotation);
-
-			//Apply changes to point
-			if (EditorGUI.EndChangeCheck())
-			{
-				Undo.RecordObject(line, "Move Point");
-				EditorUtility.SetDirty(line);
-				line.controlPoints[i] = handleTransform.InverseTransformPoint(pi);
-			}
-
-			//Save for drawing
-			pis[i] = pi;
+		{
+			var p = GetPointPosInWorld(line.controlPoints[i]);
+			CheckForAndApplyChangesToPoint(
+				GetAndShowCurrentHandleForPoint(p),
+				i
+			);
 		}
+	}
 
-		//Draw line between each point
-		Handles.DrawAAPolyLine(lineWidth, pis);
+	public Vector3 GetPointPosInWorld(Vector3 p)
+    {
+		return handleTransform.TransformPoint(p);
+	}
+
+	public Vector3 GetAndShowCurrentHandleForPoint(Vector3 pi)
+    {
+		return Handles.DoPositionHandle(pi, handleRotation);
+	}
+
+	public void CheckForAndApplyChangesToPoint(Vector3 pi, int index)
+    {
+		EditorGUI.BeginChangeCheck();
+        pi = GetAndShowCurrentHandleForPoint(pi);
+
+        //Apply changes to point
+        if (EditorGUI.EndChangeCheck())
+		{
+			Undo.RecordObject(line, "Move Point");
+			EditorUtility.SetDirty(line);
+			pi = handleTransform.InverseTransformPoint(pi);
+			line.controlPoints[index] = pi;
+		}
 	}
 }
