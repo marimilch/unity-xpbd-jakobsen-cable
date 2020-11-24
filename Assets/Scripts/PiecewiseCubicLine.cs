@@ -2,13 +2,24 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Functional;
+using ArrayTools;
 
 public class PiecewiseCubicLine : MonoBehaviour
 {
+    static readonly float TANGENT_MAG_FACTOR = .5f;
+
+    [Header("Main Properties")]
+    [SerializeField] private CurveType curveType = CurveType.Cubic;
+    [Range(10, 100)]
+    [SerializeField] private int resolution = 100;
+
+    [Header("Curve Properties")]
     [SerializeField] public Vector3[] controlPoints;
 
-    [Range(1, 10000)]
-    [SerializeField] private int resolution = 100;
+    //[Header("Debug Information")]
+    //[SerializeField] private Vector3[] aliasPoints;
+    [SerializeField] private float[] bezierVals;
+    //[SerializeField] private float[] binomials;
 
     // Start is called before the first frame update
     void Start()
@@ -30,7 +41,15 @@ public class PiecewiseCubicLine : MonoBehaviour
     {
         if (points.Length != len)
         {
-            throw new UnityException("Piecewise function needs exactly four points.");
+            throw new UnityException("Piecewise function needs exactly " + len + " points.");
+        }
+    }
+
+    void ExceptionIfNotAtLeast(int len, Vector3[] points)
+    {
+        if (points.Length < len)
+        {
+            throw new UnityException("Piecewise function needs at least " + len + " points.");
         }
     }
 
@@ -39,25 +58,33 @@ public class PiecewiseCubicLine : MonoBehaviour
         ExceptionIfNotLength(4, points);
     }
 
-    Returns<Vector2>.Expects<float> createCubicLineFunction(Vector3[] points)
+    Returns<Vector3>.Expects<float> CreateCubicLineFunction(Vector3[] points)
     {
-        ExceptionIfNotLength4(points);
+        ExceptionIfNotAtLeast(4, points);
 
         return (x) =>
         {
-            var yFun = createCubicFunction(
+            var yFun = CreateCubicFunction(
                 GetCoefficientsForOneAxis(points)
             );
 
-            var zFun = createCubicFunction(
+            var zFun = CreateCubicFunction(
                GetCoefficientsForOneAxis(points, true)
             );
 
-            return new Vector2(yFun(x), zFun(x));
+            return new Vector3(x, yFun(x), zFun(x));
         };
     }
 
-    Returns<float>.Expects<float> createCubicFunction(Vector4 cs)
+    Returns<Vector3>.Expects<float> CreateNormalizedCubicLineFunction(Vector3[] points) { 
+        return CreateNormalizedFunction(
+            points[0].x,
+            points[3].x,
+            CreateCubicLineFunction(points)
+        );
+    }
+
+    Returns<float>.Expects<float> CreateCubicFunction(Vector4 cs)
     {
         return (float x) =>
         {
@@ -70,9 +97,17 @@ public class PiecewiseCubicLine : MonoBehaviour
         };
     }
 
+    Returns<Vector3>.Expects<float> CreateAutoCubicBezierFunction(Vector3[] controlPoints)
+    {
+        return CreateCubicBezierFunction(
+            CreateAutoCubicBezierPoints(controlPoints)
+        );
+            
+    }
+
     Vector4 GetCoefficientsForOneAxis(Vector3[] points, bool getZ = false)
     {
-        ExceptionIfNotLength4(points);
+        ExceptionIfNotAtLeast(4, points);
 
         var m = new Matrix4x4();
 
@@ -111,44 +146,283 @@ public class PiecewiseCubicLine : MonoBehaviour
         return m.inverse * y;
     }
 
-    Vector3[] aliasFunction(
+    Returns<Vector3>.Expects<float> CreateNormalizedFunction(
         float start,
         float end,
-        Returns<Vector2>.Expects<float> f
+        Returns<Vector3>.Expects<float> f
     )
     {
-        var stepLength =
-            (end - start)/resolution
-        ;
-
-        var r = new Vector3[resolution + 1];
-
-        return Returns<Vector3>.Map<Vector3>(r, (v, i) =>
+        return (t) =>
         {
-            var x = start + i * stepLength;
-            var fx = f(x);
-            return new Vector3(
-                x,
-                fx.x,
-                fx.y
-            );
-        });
+            var t_ = start + t * (end - start);
+            return f(t_);
+        };
     }
 
-    // Update is called once per frame
-    void Update()
+    Vector3[] AliasFunction(
+        Returns<Vector3>.Expects<float> fNormalized
+    )
     {
-        
+        //var stepLength =
+        //    (end - start)/resolution
+        //;
+
+        var stepLength = 1f / resolution;
+        var input = new Vector3[resolution + 1];
+
+        var output = Returns<Vector3>.Map<Vector3>(input, (v, i) =>
+        {
+            //var x = start + i * stepLength;
+            var x = i * stepLength;
+            return fNormalized(x);
+        });
+
+        //aliasPoints = output;
+
+        return output;
+    }
+
+    //Vector3[] DoubleBetweenPoints(Vector3[] ps)
+    //{
+    //    var len = ps.Length;
+
+    //    if (len <= 2)
+    //    {
+    //        return ps;
+    //    }
+
+    //    var rLen = (len - 2) * 2 + 2;
+    //    var r = new Vector3[rLen];
+
+    //    r[0] = ps[0];
+    //    r[rLen - 1] = ps[len - 1];
+
+    //    for (int i = 1; i < len - 1; i++)
+    //    {
+    //        var rIndex = 2 * i;
+    //        r[rIndex - 1] = ps[i];
+    //        r[rIndex] = ps[i];
+    //    }
+
+    //    return r;
+    //}
+
+    int GetNumberOfCubicBezierPoints(int lenControlPoints = 3, int endPoints = 2)
+    {
+        return (lenControlPoints - 2) * 3 + 2 * endPoints;
+    }
+
+
+    Vector3[] CreateAutoCubicBezierPoints(
+        Vector3[] controlPoints
+    )
+    {
+        ExceptionIfNotAtLeast(2, controlPoints);
+
+        var len = controlPoints.Length;
+        var endPointsLen = 2;
+        var rLen = GetNumberOfCubicBezierPoints(len, endPointsLen);
+
+        var r = new Vector3[rLen];
+
+        //Set first two and last two points each
+        var startTan = TANGENT_MAG_FACTOR * (controlPoints[1] - controlPoints[0]);
+        r[0] = controlPoints[0];
+        r[1] = controlPoints[0] + startTan;
+
+        var lastIndex = len - 1;
+        var lastRIndex = rLen - 1;
+        var endTan = TANGENT_MAG_FACTOR * (controlPoints[lastIndex] - controlPoints[lastIndex - 1]);
+        r[lastRIndex - 1] = controlPoints[lastIndex];
+        r[lastRIndex] = controlPoints[lastIndex] + endTan;
+
+        for (int i = 1; i < lastIndex; ++i)
+        {
+            var tangent = TANGENT_MAG_FACTOR * (
+                controlPoints[i + 1] - controlPoints[i - 1]
+            );
+
+            var leftBound = 3 * (i - 1) + endPointsLen;
+
+            r[leftBound] = controlPoints[i] - tangent;
+            r[leftBound + 1] = controlPoints[i];
+            r[leftBound + 2] = controlPoints[i] + tangent;
+        }
+
+        return r;
+    }
+
+    Returns<Vector3>.Expects<float> CreateSplineFromCurve(
+        Returns<Returns<Vector3>.Expects<float>>.Expects<Vector3[]> curveCreator,
+        Vector3[] cps,
+        int requiredControlPoints = 4
+    )
+    {
+
+        var len = cps.Length;
+        int count = Mathf.FloorToInt((cps.Length - requiredControlPoints) / (requiredControlPoints - 1));
+        int end = requiredControlPoints + (count * (requiredControlPoints - 1));
+        //var end = len / requiredControlPoints;
+        //int end = len / requiredControlPoints;
+
+        return CreateNormalizedFunction(0f, end,
+            (t) =>
+            {
+                int cpsOffset = Mathf.Min(
+                    Mathf.FloorToInt( t * (requiredControlPoints - 1) ), len-1
+                );
+
+                float t_ = t % 1f;
+
+                Vector3[] controlPointsToPass = Arr<Vector3>.Extract(
+                    cps,
+                    cpsOffset,
+                    requiredControlPoints
+                );
+
+                if (controlPointsToPass.Length - cpsOffset < requiredControlPoints)
+                {
+                    return CreateDot(cps[len - 1])(t_);
+                }
+
+                return curveCreator(controlPointsToPass)(t_);
+            }
+        );
+    }
+
+    Returns<Vector3>.Expects<float> CreateDot(Vector3 p)
+    {
+        return (t) =>
+        {
+            return p;
+        };
+    }
+
+    Returns<Vector3>.Expects<float> CreateCubicBezierFunction(
+        Vector3[] controlPoints
+    )
+    {
+        return (t) =>
+        {
+            var sum = Vector3.zero;
+            var len = controlPoints.Length;
+            var n = 3;
+
+            for (int k = 0; k <= n; ++k)
+            {
+                sum += BernsteinPolynomial(n, k)(t) * controlPoints[k];
+            }
+
+            return sum;
+        };     
+    }
+
+    Returns<float>.Expects<float> BernsteinPolynomial(int n, int k)
+    {
+        return (t) =>
+        {
+            return
+                BinomialCoefficient(n, k) *
+                Mathf.Pow(t, k) *
+                Mathf.Pow(1 - t, n - k)
+            ;
+        };
+    }
+
+    float BinomialCoefficient(int n, int k)
+    {
+        if (n < k)
+        {
+            throw new UnityException("k > n in Binomial");
+            //return 0f;
+        }
+
+        if (k == 0 || n == 0)
+        {
+            return 1f;
+        }
+
+        //float r = 1f;
+        int nMinK = n - k;
+
+        //for (int i = n; i > Mathf.Max(k, nMinK); --i)
+        //{
+        //    r *= i;
+        //}
+
+        //return r / Mathf.Min(k, nMinK);
+
+        return Faculty(n, Mathf.Max(k, nMinK)) / Faculty(Mathf.Min(k, nMinK));
+    }
+
+    float Faculty(int n, int k = 1)
+    {
+        float r = 1f;
+
+        for (int i = n; i > k; --i)
+        {
+            r *= i;
+        }
+
+        return r;
+    }
+
+    Returns<Vector3>.Expects<float> GetSelectedFunctionType()
+    {
+        Returns<Returns<Vector3>.Expects<float>>.Expects<Vector3[]> creator;
+        switch (curveType)
+        {
+            
+            case CurveType.Cubic:
+                creator = CreateNormalizedCubicLineFunction;
+                break;
+            case CurveType.CatmullRom:
+                //return CreateAutoCubicBezierFunction(controlPoints);
+                creator = CreateAutoCubicBezierFunction;
+                break;
+            default:
+                creator = CreateNormalizedCubicLineFunction;
+                break;
+        }
+
+        //return CreateSplineFromCurve(creator, controlPoints, 4);
+        return creator(Arr<Vector3>.Extract(controlPoints, 0, 4));
     }
 
     public Vector3[] GetRenderedPoints()
     {
-        ExceptionIfNotLength4(controlPoints);
+        //ExceptionIfNotLength4(controlPoints);
 
-        return aliasFunction(
-            controlPoints[0].x,
-            controlPoints[3].x,
-            createCubicLineFunction(controlPoints)
+        //RunTests();
+
+        //return CreateAutoCubicBezierPoints(controlPoints);
+
+        return AliasFunction(
+            GetSelectedFunctionType()
         );
     }
+
+    //private void RunTests()
+    //{
+    //    int n = 3;
+    //    int k = 3;
+    //    float step = 1/10f;
+
+    //    bezierVals = new float[n * k * resolution];
+    //    binomials = new float[n * k];
+
+    //    for (int j = 0; j < n; ++j)
+    //    {
+    //        for (int k_ = 0; k_ < k; ++k_)
+    //        {
+    //            for (int i = 0; i < resolution; ++i)
+    //            {
+    //                bezierVals[j + k_ * n + i * k * n] =
+    //                BernsteinPolynomial(j, k_)(i * step);
+    //            }
+
+    //            binomials[j + k_ * n] = BinomialCoefficient(j, k_);
+    //        }
+    //    }
+    //}
 }
