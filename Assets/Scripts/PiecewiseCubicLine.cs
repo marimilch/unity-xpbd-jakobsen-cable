@@ -99,7 +99,7 @@ public class PiecewiseCubicLine : MonoBehaviour
 
     Returns<Vector3>.Expects<float> CreateAutoCubicBezierFunction(Vector3[] controlPoints)
     {
-        return CreateCubicBezierFunction(
+        return CreateCubicBezierSplineFunction(
             CreateAutoCubicBezierPoints(controlPoints)
         );
             
@@ -207,9 +207,9 @@ public class PiecewiseCubicLine : MonoBehaviour
     //    return r;
     //}
 
-    int GetNumberOfCubicBezierPoints(int lenControlPoints = 3, int endPoints = 2)
+    int GetNumberOfCubicBezierPoints(int lenControlPoints = 3, int endPointsLen = 2)
     {
-        return (lenControlPoints - 2) * 3 + 2 * endPoints;
+        return (lenControlPoints - 2) * 3 + 2 * endPointsLen;
     }
 
 
@@ -248,6 +248,9 @@ public class PiecewiseCubicLine : MonoBehaviour
             r[leftBound + 1] = controlPoints[i];
             r[leftBound + 2] = controlPoints[i] + tangent;
         }
+
+        //Debug.Log("r size: " + rLen);
+        //Debug.Log("len: " + len);
 
         return r;
     }
@@ -302,6 +305,8 @@ public class PiecewiseCubicLine : MonoBehaviour
         Vector3[] controlPoints
     )
     {
+        ExceptionIfNotLength4(controlPoints);
+
         return (t) =>
         {
             var sum = Vector3.zero;
@@ -316,6 +321,70 @@ public class PiecewiseCubicLine : MonoBehaviour
             return sum;
         };     
     }
+
+    Returns<Vector3>.Expects<float> CreateCubicBezierSplineFunction(
+        Vector3[] controlPoints_
+    )
+    {
+        var len = controlPoints_.Length;
+
+        var cps = Arr<Vector3>.Extract(
+            controlPoints_,
+            0,
+            len - (len % 3) + 1
+        );
+
+        //Debug.Log(controlPoints.Length);
+
+        return CreateNormalizedFunction(
+            0f,
+            cps.Length / 3,
+            (t) =>
+            {
+                var t_ = t % 1f;
+
+                var offset = Mathf.Min(
+                    Mathf.FloorToInt(t) * 3,
+                    cps.Length - 4
+                );
+
+                //Debug.Log(offset);
+                //Debug.Log(cps.Length);
+                //Debug.Log(GetNumberOfCubicBezierPoints(controlPoints.Length, 2));
+                //Debug.Log("-----");
+
+                var ps = Arr<Vector3>.Extract(cps, offset, 4);
+                return CreateCubicBezierFunction(ps)(t_);
+            }
+        );
+    }
+
+    //Returns<Vector3>.Expects<float> CreateCatmullCurveFunction(
+    //    Vector3[] controlPoints
+    //)
+    //{
+    //    ExceptionIfNotLength4(controlPoints);
+
+    //    return (t) =>
+    //    {
+    //        var r = new Vector3[controlPoints.Length * 3];
+
+    //        for (int i = 1; i < 3; ++i)
+    //        {
+    //            var tangent = TANGENT_MAG_FACTOR * (
+    //                controlPoints[i + 1] - controlPoints[i - 1]
+    //            );
+
+    //            var leftBound = 3 * (i - 1);
+
+    //            r[leftBound] = controlPoints[i] - tangent;
+    //            r[leftBound + 1] = controlPoints[i];
+    //            r[leftBound + 2] = controlPoints[i] + tangent;
+    //        }
+
+    //        return CreateCubicBezierFunction(r)(t);
+    //    };
+    //}
 
     Returns<float>.Expects<float> BernsteinPolynomial(int n, int k)
     {
@@ -386,7 +455,7 @@ public class PiecewiseCubicLine : MonoBehaviour
         }
 
         //return CreateSplineFromCurve(creator, controlPoints, 4);
-        return creator(Arr<Vector3>.Extract(controlPoints, 0, 4));
+        return creator(controlPoints);
     }
 
     public Vector3[] GetRenderedPoints()
