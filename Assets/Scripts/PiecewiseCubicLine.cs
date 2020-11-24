@@ -6,12 +6,12 @@ using ArrayTools;
 
 public class PiecewiseCubicLine : MonoBehaviour
 {
-    static readonly float TANGENT_MAG_FACTOR = .5f;
+    static readonly float TANGENT_MAG_FACTOR = .25f;
 
     [Header("Main Properties")]
     [SerializeField] private CurveType curveType = CurveType.Cubic;
-    [Range(10, 100)]
-    [SerializeField] private int resolution = 100;
+    [Range(1, 100)]
+    [SerializeField] private int resolution = 25;
 
     [Header("Curve Properties")]
     [SerializeField] public Vector3[] controlPoints;
@@ -166,9 +166,10 @@ public class PiecewiseCubicLine : MonoBehaviour
         //var stepLength =
         //    (end - start)/resolution
         //;
+        var dynamicResolution = resolution * controlPoints.Length;
 
-        var stepLength = 1f / resolution;
-        var input = new Vector3[resolution + 1];
+        var stepLength = 1f / dynamicResolution;
+        var input = new Vector3[dynamicResolution + 1];
 
         var output = Returns<Vector3>.Map<Vector3>(input, (v, i) =>
         {
@@ -233,8 +234,8 @@ public class PiecewiseCubicLine : MonoBehaviour
         var lastIndex = len - 1;
         var lastRIndex = rLen - 1;
         var endTan = TANGENT_MAG_FACTOR * (controlPoints[lastIndex] - controlPoints[lastIndex - 1]);
-        r[lastRIndex - 1] = controlPoints[lastIndex];
-        r[lastRIndex] = controlPoints[lastIndex] + endTan;
+        r[lastRIndex - 1] = controlPoints[lastIndex] - endTan;
+        r[lastRIndex] = controlPoints[lastIndex];
 
         for (int i = 1; i < lastIndex; ++i)
         {
@@ -334,11 +335,14 @@ public class PiecewiseCubicLine : MonoBehaviour
             len - (len % 3) + 1
         );
 
-        //Debug.Log(controlPoints.Length);
+        //var end = ((float)(cps.Length - 1)) / 3f + 1f;
+        var end = (cps.Length - 1) / 3f;
+
+        //Debug.Log(end);
 
         return CreateNormalizedFunction(
             0f,
-            cps.Length / 3,
+            end,
             (t) =>
             {
                 var t_ = t % 1f;
@@ -348,7 +352,6 @@ public class PiecewiseCubicLine : MonoBehaviour
                     cps.Length - 4
                 );
 
-                //Debug.Log(offset);
                 //Debug.Log(cps.Length);
                 //Debug.Log(GetNumberOfCubicBezierPoints(controlPoints.Length, 2));
                 //Debug.Log("-----");
@@ -424,9 +427,11 @@ public class PiecewiseCubicLine : MonoBehaviour
         return Faculty(n, Mathf.Max(k, nMinK)) / Faculty(Mathf.Min(k, nMinK));
     }
 
-    float Faculty(int n, int k = 1)
+    float Faculty(int n, int k_ = 1)
     {
         float r = 1f;
+
+        int k = Mathf.Max(1, k_);
 
         for (int i = n; i > k; --i)
         {

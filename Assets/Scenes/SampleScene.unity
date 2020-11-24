@@ -292,12 +292,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc11a615116304f0fa164ca4e58fee28, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  curveType: 1
+  resolution: 1000
   controlPoints:
-  - {x: 1.0763531, y: 0, z: -0.34938145}
-  - {x: 2, y: 2.055626, z: 0}
-  - {x: 3.8078053, y: 0, z: -0.041427135}
-  - {x: 6.3761067, y: 0, z: 3.0127363}
-  resolution: 10
+  - {x: -48.859306, y: -19.19384, z: -26.646105}
+  - {x: 1.4190359, y: -15.453018, z: -43.574425}
+  - {x: 29.660587, y: 0, z: 43.095886}
+  - {x: 36.70546, y: 0, z: -26.15008}
+  - {x: 56.51581, y: 29.781479, z: -29.909685}
+  - {x: 99.640625, y: 0, z: -61.43174}
+  - {x: 67.651825, y: 19.126022, z: 45.44322}
+  - {x: 114.501854, y: 0, z: 46.4487}
+  - {x: 277.52875, y: 0, z: -1.317821}
+  - {x: 146.03365, y: -174.08003, z: -154.33493}
+  - {x: 164.99101, y: 0, z: -140.64963}
+  - {x: 388.33752, y: 0, z: -146.28558}
+  - {x: 378.90442, y: 0, z: 2.2597108}
+  - {x: 496.25098, y: 78.60628, z: -72.12267}
+  bezierVals: []
 --- !u!4 &1277680813
 Transform:
   m_ObjectHideFlags: 0
@@ -306,7 +318,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1277680811}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -10.8, y: 0.7, z: -7.4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
