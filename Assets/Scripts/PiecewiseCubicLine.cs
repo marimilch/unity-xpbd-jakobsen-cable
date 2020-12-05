@@ -166,7 +166,7 @@ public class PiecewiseCubicLine : MonoBehaviour
         //var stepLength =
         //    (end - start)/resolution
         //;
-        var dynamicResolution = resolution * controlPoints.Length;
+        var dynamicResolution = resolution * (controlPoints.Length - 1);
 
         var stepLength = 1f / dynamicResolution;
         var input = new Vector3[dynamicResolution + 1];
@@ -256,43 +256,43 @@ public class PiecewiseCubicLine : MonoBehaviour
         return r;
     }
 
-    Returns<Vector3>.Expects<float> CreateSplineFromCurve(
-        Returns<Returns<Vector3>.Expects<float>>.Expects<Vector3[]> curveCreator,
-        Vector3[] cps,
-        int requiredControlPoints = 4
-    )
-    {
+    //Returns<Vector3>.Expects<float> CreateSplineFromCurve(
+    //    Returns<Returns<Vector3>.Expects<float>>.Expects<Vector3[]> curveCreator,
+    //    Vector3[] cps,
+    //    int requiredControlPoints = 4
+    //)
+    //{
 
-        var len = cps.Length;
-        int count = Mathf.FloorToInt((cps.Length - requiredControlPoints) / (requiredControlPoints - 1));
-        int end = requiredControlPoints + (count * (requiredControlPoints - 1));
-        //var end = len / requiredControlPoints;
-        //int end = len / requiredControlPoints;
+    //    var len = cps.Length;
+    //    int count = Mathf.FloorToInt((cps.Length - requiredControlPoints) / (requiredControlPoints - 1));
+    //    int end = requiredControlPoints + (count * (requiredControlPoints - 1));
+    //    //var end = len / requiredControlPoints;
+    //    //int end = len / requiredControlPoints;
 
-        return CreateNormalizedFunction(0f, end,
-            (t) =>
-            {
-                int cpsOffset = Mathf.Min(
-                    Mathf.FloorToInt( t * (requiredControlPoints - 1) ), len-1
-                );
+    //    return CreateNormalizedFunction(0f, end,
+    //        (t) =>
+    //        {
+    //            int cpsOffset = Mathf.Min(
+    //                Mathf.FloorToInt( t * (requiredControlPoints - 1) ), len-1
+    //            );
 
-                float t_ = t % 1f;
+    //            float t_ = t % 1f;
 
-                Vector3[] controlPointsToPass = Arr<Vector3>.Extract(
-                    cps,
-                    cpsOffset,
-                    requiredControlPoints
-                );
+    //            Vector3[] controlPointsToPass = Arr<Vector3>.Extract(
+    //                cps,
+    //                cpsOffset,
+    //                requiredControlPoints
+    //            );
 
-                if (controlPointsToPass.Length - cpsOffset < requiredControlPoints)
-                {
-                    return CreateDot(cps[len - 1])(t_);
-                }
+    //            if (controlPointsToPass.Length - cpsOffset < requiredControlPoints)
+    //            {
+    //                return CreateDot(cps[len - 1])(t_);
+    //            }
 
-                return curveCreator(controlPointsToPass)(t_);
-            }
-        );
-    }
+    //            return curveCreator(controlPointsToPass)(t_);
+    //        }
+    //    );
+    //}
 
     Returns<Vector3>.Expects<float> CreateDot(Vector3 p)
     {
@@ -324,42 +324,73 @@ public class PiecewiseCubicLine : MonoBehaviour
     }
 
     Returns<Vector3>.Expects<float> CreateCubicBezierSplineFunction(
-        Vector3[] controlPoints_
+        Vector3[] controlPoints
     )
     {
-        var len = controlPoints_.Length;
+        //make sure there are 3n+1 points
+        //not necessary since we use integer division afterwards
+        //var cps = Arr<Vector3>.Extract(
+        //    controlPoints_,
+        //    0,
+        //    len - ((len - 1) % 3)
+        //);
 
-        var cps = Arr<Vector3>.Extract(
-            controlPoints_,
-            0,
-            len - (len % 3) + 1
-        );
+        var fArrayLength = (controlPoints.Length - 1) / 3;
+        var fArray = new Returns<Vector3>.Expects<float>[fArrayLength];
+
+        for (int i = 0; i < fArrayLength; ++i)
+        {
+            var ps = Arr<Vector3>.Extract(controlPoints, 3*i, 4);
+            fArray[i] = CreateCubicBezierFunction(ps);
+        }
 
         //var end = ((float)(cps.Length - 1)) / 3f + 1f;
-        var end = (cps.Length - 1) / 3f;
+        var end = (float) fArrayLength;
 
         //Debug.Log(end);
 
         return CreateNormalizedFunction(
             0f,
             end,
-            (t) =>
-            {
-                var t_ = t % 1f;
-
-                var offset = Mathf.Min(
-                    Mathf.FloorToInt(t) * 3,
-                    cps.Length - 4
-                );
-
-                //Debug.Log(cps.Length);
-                //Debug.Log(GetNumberOfCubicBezierPoints(controlPoints.Length, 2));
-                //Debug.Log("-----");
-
-                var ps = Arr<Vector3>.Extract(cps, offset, 4);
-                return CreateCubicBezierFunction(ps)(t_);
-            }
+            CreateGluedFunction(
+                fArray
+            )
         );
+    }
+
+    Returns<Vector3>.Expects<float> CreateGluedFunction(
+        Returns<Vector3>.Expects<float>[] fs
+    )
+    {
+        if (fs.Length < 1)
+        {
+            throw new UnityException(
+                "CreateGluedFunction did not receive enough functions"
+            );
+        }
+        return (float t) =>
+        {
+            //edge cases first
+            //first function
+            if (t < 1f)
+            {
+                return fs[0](t);
+            }
+
+            //last function
+            var lastIndex = fs.Length - 1;
+            var fLength = (float)lastIndex;
+            if (t >= fLength)
+            {
+                return fs[lastIndex](t - fLength);
+            }
+
+            //in between function
+            var t_ = t % 1f;
+            var fIndex = Mathf.FloorToInt(t);
+
+            return fs[fIndex](t_);
+        };
     }
 
     //Returns<Vector3>.Expects<float> CreateCatmullCurveFunction(
