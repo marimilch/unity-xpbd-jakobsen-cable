@@ -4,7 +4,7 @@ using UnityEngine;
 using Functional;
 using ArrayTools;
 
-public class PiecewiseCubicLine : MonoBehaviour
+public class CableSpline : MonoBehaviour
 {
     static readonly float TANGENT_MAG_FACTOR = .25f;
 
@@ -18,14 +18,8 @@ public class PiecewiseCubicLine : MonoBehaviour
 
     //[Header("Debug Information")]
     //[SerializeField] private Vector3[] aliasPoints;
-    [SerializeField] private float[] bezierVals;
+    //[SerializeField] private float[] bezierVals;
     //[SerializeField] private float[] binomials;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
 
     private void Reset()
     {
@@ -159,14 +153,20 @@ public class PiecewiseCubicLine : MonoBehaviour
         };
     }
 
+    public int GetDynamicResolution(int res = 0)
+    {
+        return GetResolution(res) * (controlPoints.Length - 1);
+    }
+
     Vector3[] AliasFunction(
-        Returns<Vector3>.Expects<float> fNormalized
+        Returns<Vector3>.Expects<float> fNormalized,
+        int res = 0
     )
     {
         //var stepLength =
         //    (end - start)/resolution
         //;
-        var dynamicResolution = resolution * (controlPoints.Length - 1);
+        var dynamicResolution = GetDynamicResolution(res);
 
         var stepLength = 1f / dynamicResolution;
         var input = new Vector3[dynamicResolution + 1];
@@ -494,8 +494,9 @@ public class PiecewiseCubicLine : MonoBehaviour
         return creator(controlPoints);
     }
 
-    public Vector3[] GetRenderedPoints()
+    public Vector3[] GetRenderedPoints(int res = 0)
     {
+        res = GetResolution(res);
         //ExceptionIfNotLength4(controlPoints);
 
         //RunTests();
@@ -503,8 +504,18 @@ public class PiecewiseCubicLine : MonoBehaviour
         //return CreateAutoCubicBezierPoints(controlPoints);
 
         return AliasFunction(
-            GetSelectedFunctionType()
+            GetSelectedFunctionType(),
+            res
         );
+    }
+
+    public int GetResolution(int res = 0)
+    {
+        if (res < 1)
+        {
+            return resolution;
+        }
+        return res;
     }
 
     //private void RunTests()

@@ -5,11 +5,11 @@ using UnityEngine;
 using UnityEditor;
 using Functional;
 
-[CustomEditor(typeof(PiecewiseCubicLine))]
+[CustomEditor(typeof(CableSpline))]
 public class LineInspector : Editor
 {
 	const float lineWidth = 4.0f;
-	PiecewiseCubicLine line;
+	CableSpline line;
 
 	//Global properties
 	Transform handleTransform;
@@ -17,7 +17,7 @@ public class LineInspector : Editor
 
 	void initAll()
     {
-		line = target as PiecewiseCubicLine;
+		line = target as CableSpline;
 		handleTransform = line.transform;
 		handleRotation = Tools.pivotRotation == PivotRotation.Local ?
 			handleTransform.rotation : Quaternion.identity;
