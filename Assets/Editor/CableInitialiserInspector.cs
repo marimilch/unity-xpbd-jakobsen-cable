@@ -5,11 +5,12 @@ using UnityEngine;
 using UnityEditor;
 using Functional;
 
-[CustomEditor(typeof(CableSpline))]
-public class LineInspector : Editor
+[CustomEditor(typeof(CableInitialiser))]
+public class CableInitialiserInspector : Editor
 {
 	const float lineWidth = 4.0f;
-	CableSpline line;
+	CableInitialiser line;
+	const int inbetweenRes = 12;
 
 	//Global properties
 	Transform handleTransform;
@@ -17,7 +18,7 @@ public class LineInspector : Editor
 
 	void initAll()
     {
-		line = target as CableSpline;
+		line = target as CableInitialiser;
 		handleTransform = line.transform;
 		handleRotation = Tools.pivotRotation == PivotRotation.Local ?
 			handleTransform.rotation : Quaternion.identity;
@@ -32,10 +33,19 @@ public class LineInspector : Editor
 
 		HandleChangesToControlPoints();
 
+		var cps = line.controlPoints;
+		var aliasPoints = SplineTools.AliasFunctionDynamically(
+			CatmullSpline.CreateCatmullSpline(cps),
+			cps.Length,
+			inbetweenRes
+		)
+
+		;
+
 		//Draw line between each point in world space
 		Handles.DrawAAPolyLine(
 			lineWidth, Returns<Vector3>.Map(
-				line.GetRenderedPoints(),
+				aliasPoints,
 				GetPointPosInWorld
 			)
 		);

@@ -30,6 +30,8 @@ public class CableColliderCreator : MonoBehaviour
         }
     }
 
+
+
     Transform CreateTransformWithCap()
     {
         //Create Game Object with Capsule Collider
@@ -37,6 +39,9 @@ public class CableColliderCreator : MonoBehaviour
         o.name = "Cable Bone";
         var cc = o.AddComponent<CapsuleCollider>();
         var t = o.transform;
+
+        //Add RigidBody
+        o.AddComponent<CapsuleCollider>();
 
         //Set facing direction to z-axis (forward)
         cc.direction = 2; //2 is the z-axis
