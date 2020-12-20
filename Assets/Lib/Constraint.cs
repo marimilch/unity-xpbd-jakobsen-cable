@@ -46,9 +46,12 @@ public class Constraint
     {
         for (int i = 0; i <= rbsAll.Length - cardinality; ++i)
         {
+            
             var deltaXs = ProjectConstraint(
                 Arr<Rigidbody>.Extract(rbsAll, i, cardinality)
             );
+
+            //Debug.Log(deltaXs[0] + " " + deltaXs[1]);
 
             ApplyDeltaXFrom(ref rbsAll, ref deltaXs, i);
         }
@@ -62,9 +65,13 @@ public class Constraint
     {
         for (int i = 0; i < deltaXs.Length; ++i)
         {
+            //Debug.Log("before " + rbsAll[i + offset].transform.position);
             rbsAll[i + offset].MovePosition(
                  rbsAll[i + offset].transform.position + deltaXs[i]
             );
+
+            //Debug.Log("before " + rbsAll[i + offset].transform.position);
+
         }
     }
 
@@ -79,12 +86,15 @@ public class Constraint
             cxi
         );
 
-
+        //Debug.Log(-f(xis) + " result.");
         deltaLambda = (-f(xis) - alpha_snake * currentTotalLagrange) /
             (cmc + alpha_snake);
 
+        //Debug.Log(deltaLambda + " check");
+
         var deltaXs = Returns<Vector3>.Map<Vector3>(cm, (v) =>
         {
+            //return v;
             return v * deltaLambda;
         });
 
@@ -93,16 +103,6 @@ public class Constraint
         return deltaXs;
     }
 
-    //public Vector3[] GetDeltaXs()
-    //{
-    //    return deltaXs;
-    //}
-
-    //public float GetDeltaLambda()
-    //{
-    //    return deltaLambda;
-    //}
-
     Vector3[] GetLocations(Rigidbody[] rbs)
     {
         var len = rbs.Length;
@@ -110,6 +110,7 @@ public class Constraint
 
         for (int i = 0; i < len; i++)
         {
+
             rs[i] = rbs[i].transform.position;
         }
 

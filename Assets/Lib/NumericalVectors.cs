@@ -56,8 +56,8 @@ namespace NumericalVectors
             float epsilon = .01f
         )
         {
-            var nabla = new Returns<float>.Expects<Vector3[]>[arity];
             var arity3 = arity * 3;
+            var nabla = new Returns<float>.Expects<Vector3[]>[arity3];
 
             for (int i = 0; i < arity3; ++i)
             {
@@ -68,13 +68,17 @@ namespace NumericalVectors
             {
                 var rs = new Vector3[arity];
 
-                for (int i = 0; i < arity; i += 3)
+                for (int i = 0; i < arity; ++i)
                 {
+                    var i3 = i * 3;
                     var v = new Vector3(
-                        nabla[i](vs),
-                        nabla[i + 1](vs),
-                        nabla[i + 2](vs)
+                        nabla[i3](vs),
+                        nabla[i3 + 1](vs),
+                        nabla[i3 + 2](vs)
                     );
+
+                    rs[i] = v;
+                    //Debug.Log(rs[i] + " check2");
                 }
 
                 return rs;

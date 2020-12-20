@@ -8,42 +8,49 @@ public class XPBD : MonoBehaviour
     [Range(1,25)]
     [SerializeField] private uint solverIterations = 1;
 
-    Vector3[] currentXs;
-    float[] currentLambdas;
-
     Constraint[] constraints;
+    Rigidbody[] rigidbodies;
 
-    // Start is called before the first frame update
-    void Start()
+    bool ready = false;
+
+    public void Attach(
+        Constraint[] constraints,
+        Rigidbody[] rigidbodies,
+        uint solverIterations = 1
+    )
     {
-        currentXs = new Vector3[solverIterations];
-        currentLambdas = new float[solverIterations];
+        this.constraints = constraints;
+        this.rigidbodies = rigidbodies;
+        this.solverIterations = solverIterations;
+
+        ready = true;
     }
 
     // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
-        
+        if (ready)
+        {
+            XPBDSimulation();
+        }
     }
 
-    void XPBDSimulation(ref Rigidbody[] bsAll)
+    void XPBDSimulation()
     {
-        var xSnakes = Returns<Vector3>.Map<Rigidbody>(bsAll, (b) =>
+        var xSnakes = Returns<Vector3>.Map<Rigidbody>(rigidbodies, (b) =>
         {
             return PredictRigidBodyPosSingle(b);
         });
 
         //apply x_snake vector position
-        InitXNPlusOne(ref bsAll, ref xSnakes);
-
-        currentLambdas[0] = 0f;
+        InitXNPlusOne(ref rigidbodies, ref xSnakes);
 
         for (int j = 0; j < constraints.Length; ++j)
         {
             for (int i = 0; i < solverIterations; ++i)
             {
                 constraints[j].ProjectContraintsAll(
-                    ref bsAll
+                    ref rigidbodies
                 );
             }
         }    
