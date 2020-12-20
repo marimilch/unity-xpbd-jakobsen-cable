@@ -440,7 +440,7 @@ Transform:
   m_GameObject: {fileID: 597164238}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 4.03, y: 17.49, z: 1.21}
-  m_LocalScale: {x: 0.2666233, y: 0.23970996, z: 11.236687}
+  m_LocalScale: {x: 1.0693727, y: 0.23970996, z: 11.236687}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 5
@@ -548,6 +548,7 @@ GameObject:
   - component: {fileID: 1277680813}
   - component: {fileID: 1277680812}
   - component: {fileID: 1277680814}
+  - component: {fileID: 1277680815}
   m_Layer: 0
   m_Name: Line
   m_TagString: Untagged
@@ -568,8 +569,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controlPoints:
-  - {x: 0.66492176, y: 0, z: 0}
-  - {x: 2.439306, y: 0, z: 0}
+  - {x: 7.745243, y: 0, z: 0}
+  - {x: 13.785817, y: 0, z: 0}
 --- !u!4 &1277680813
 Transform:
   m_ObjectHideFlags: 0
@@ -578,7 +579,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1277680811}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.53, y: 18.228, z: 4.46}
+  m_LocalPosition: {x: -6.84, y: 18.228, z: 4.46}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -596,8 +597,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e0ec82751921416dba30fad4a4c8342, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 15
+  resolution: 100
   cableRadius: 0.01
-  springConstant: 0.05
-  dampConstant: 0.001
-  kgPerMeter: 0.002
+  springConstant: 3
+  dampConstant: 0.01
+  kgPerMeter: 0.1
+--- !u!114 &1277680815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1277680811}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c7743ab57c24340d0b32099652fbf54e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resolution: 100
+  cableRadius: 0.125
+  maxAnglePerMeter: 0.25
+  kgPerMeter: 0.25

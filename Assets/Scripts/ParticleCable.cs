@@ -10,9 +10,11 @@ public class ParticleCable : MonoBehaviour
 
     [SerializeField] private float cableRadius = .1f;
 
+    [Range(1, 1000)]
     [Tooltip("Will determine how strong the spring effect of the cable is")]
     [SerializeField] private float springConstant = .1f;
 
+    [Range(0, 100)]
     [Tooltip("Will determine how strong the dampening effect of the cable is")]
     [SerializeField] private float dampConstant = .1f;
 
@@ -43,14 +45,14 @@ public class ParticleCable : MonoBehaviour
         );
         var cableLength = SplineTools.GetFunLength(jointPoints);
 
-        restDistance = cableLength / (float) resolution;
-        weightPerJoint = cableLength * kgPerMeter / (float) resolution;
-
         //Create Capsule Collider for each line
         numberOfParticles = jointPoints.Length;
         numberOfJoints = numberOfParticles - 1;
         capParents = new Transform[numberOfParticles];
         rigidbodies = new Rigidbody[numberOfParticles];
+
+        restDistance = cableLength / (float) numberOfJoints;
+        weightPerJoint = cableLength * kgPerMeter / (float) resolution;
 
         //Initialize all child object colliders
         for (int i = 0; i < numberOfParticles; ++i)
@@ -118,7 +120,7 @@ public class ParticleCable : MonoBehaviour
             );
         }
 
-        for (int i = reach; i < numberOfJoints - reach; i++)
+        for (int i = reach; i < numberOfParticles - reach; i++)
         {
             rigidbodies[i].AddForce(
                 currentForcesBetween[i] - currentForcesBetween[i - 1],
