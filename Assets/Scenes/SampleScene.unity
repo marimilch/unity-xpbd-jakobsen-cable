@@ -549,6 +549,7 @@ GameObject:
   - component: {fileID: 1277680812}
   - component: {fileID: 1277680814}
   - component: {fileID: 1277680815}
+  - component: {fileID: 1277680816}
   m_Layer: 0
   m_Name: Line
   m_TagString: Untagged
@@ -592,13 +593,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1277680811}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e0ec82751921416dba30fad4a4c8342, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 100
-  cableRadius: 0.01
+  cableRadius: 0.05
   springConstant: 3
   dampConstant: 0.01
   kgPerMeter: 0.1
@@ -615,6 +616,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   resolution: 100
-  cableRadius: 0.125
+  cableRadius: 0.05
   maxAnglePerMeter: 0.25
+  kgPerMeter: 0.25
+--- !u!114 &1277680816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1277680811}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0db07c2cd4294f3ebde42d2f519e320, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resolution: 100
+  cableRadius: 0.05
   kgPerMeter: 0.25

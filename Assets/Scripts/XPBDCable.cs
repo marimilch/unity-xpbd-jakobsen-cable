@@ -71,7 +71,7 @@ public class XPBDCable : MonoBehaviour
             var d = Mathf.Abs((vs[1] - vs[0]).magnitude) - restDistance;
             //Debug.Log("Distance delta: " + d);
             return d;
-        }, true, 2, 0.00000001f);
+        }, true, 2, 0);
 
         //cs[1] = new Constraint((vs) =>
         //{
@@ -104,7 +104,8 @@ public class XPBDCable : MonoBehaviour
         ;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         rb.mass = weightPerJoint;
-        rb.useGravity = false;
+        //rb.useGravity = false;
+        //rb.isKinematic = true;
 
         //Set facing direction to z-axis (forward)
         cc.direction = 2; //2 is the z-axis
