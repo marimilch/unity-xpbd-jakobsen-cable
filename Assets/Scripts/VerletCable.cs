@@ -12,7 +12,8 @@ public class VerletCable : MonoBehaviour
     [Tooltip("The radius of the cable")]
     [SerializeField] float radius = .25f;
 
-    [SerializeField] float dampening = .1f;
+    [Range(0f, 0.05f)]
+    [SerializeField] float dampening = .01f;
 
     [Range(0, 25)]
     [Tooltip("The more iterations, the preciser " +
@@ -70,6 +71,14 @@ public class VerletCable : MonoBehaviour
 
     void FixedUpdate()
     {
+        // Set to default if necessary here already,
+        // so it can be changed while play mode.
+
+        if (solverIterations < 1)
+        {
+            solverIterations = Physics.defaultSolverIterations;
+        }
+
         Simulate();
         if (debugMode)
         {
@@ -114,11 +123,12 @@ public class VerletCable : MonoBehaviour
 
     void SatisfyConstraints()
     {
-        for (int i = 0; i < numberOfParticles - 1; ++i)
+        for (int i = 0; i < numberOfParticles; ++i)
         {
             //ref var p = ref currentXs[i];
 
             DistanceConstraint(i);
+            DistanceConstraint(i, 1);
             CollisionConstraint(i);
 
             ////project out
@@ -130,14 +140,20 @@ public class VerletCable : MonoBehaviour
     }
 
     //uses two points
-    void DistanceConstraint(int i)
+    void DistanceConstraint(int i, int interD = 0)
     {
+        //requirements
+        if (RequirePoints(2 + interD, i)) return;
+
+        var interD1 = interD + 1;
+
         //points
         ref var p1 = ref currentXs[i];
-        ref var p2 = ref currentXs[i + 1];
+        ref var p2 = ref currentXs[i + interD1];
 
         var dir = p2 - p1;
-        var cDir = .5f * (dir - dir.normalized * restDistance);
+        var cDir =
+            .5f * (dir - dir.normalized * restDistance * interD1);
 
         p1 += cDir;
         p2 -= cDir;
@@ -146,6 +162,9 @@ public class VerletCable : MonoBehaviour
     //uses two points
     void CollisionConstraint(int i)
     {
+        //requirements
+        if (RequirePoints(2, i)) return;
+
         //points
         ref var p1 = ref currentXs[i];
         ref var p2 = ref currentXs[i+1];
@@ -165,12 +184,20 @@ public class VerletCable : MonoBehaviour
             var c1 = c.ClosestPoint(p1);
             var c2 = c.ClosestPoint(p2);
 
-            var radius_ = 1f;
-
             p1 += p1 - c1;
             p2 += p2 - c2;
         }
 
+    }
+
+    bool RequirePoints(int n, int i)
+    {
+        if (i + n <= numberOfParticles)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     void Simulate()
