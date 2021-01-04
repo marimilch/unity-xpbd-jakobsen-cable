@@ -4,6 +4,7 @@ using System.Collections;
 public class CableInitialiser : MonoBehaviour
 {
     public Vector3[] controlPoints;
+    //editor view in CableInitialiserInspector.cs
 
     private void Reset()
     {
