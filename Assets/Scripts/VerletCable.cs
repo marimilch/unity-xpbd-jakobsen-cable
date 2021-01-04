@@ -28,6 +28,8 @@ public class VerletCable : MonoBehaviour
     float dt_squared = 0f;
     float restDistance = 0f;
 
+    CapsuleCollider capsuleCollider;
+
     Vector3[] currentXs;
     Vector3[] previousXs;
     Vector3[] accelerations;
@@ -39,13 +41,15 @@ public class VerletCable : MonoBehaviour
         var line = GetComponent<CableInitialiser>();
         numberOfParticles = resolution + 1;
 
+        capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
+
         currentXs = SplineTools.AliasFunction(
             CatmullSpline.CreateCatmullSpline(line.controlPoints),
             resolution
         );
 
         var cableLength = SplineTools.GetFunLength(currentXs);
-        restDistance = cableLength / (float) resolution;
+        restDistance = cableLength / (float)resolution;
 
         //set to world coordinates
         for (int i = 0; i < numberOfParticles; ++i)
@@ -96,7 +100,7 @@ public class VerletCable : MonoBehaviour
 
     void Integrate()
     {
-        for(int i = 0; i < numberOfParticles; ++i)
+        for (int i = 0; i < numberOfParticles; ++i)
         {
             ref var x = ref currentXs[i];
             ref var x_ = ref previousXs[i];
@@ -110,12 +114,13 @@ public class VerletCable : MonoBehaviour
             ;
 
             x_ = temp;
+            //x_ = (x - temp).magnitude > Physics.defaultContactOffset ? temp : x;
         }
     }
 
     void SetForces()
     {
-        for(int i = 0; i < numberOfParticles; ++i)
+        for (int i = 0; i < numberOfParticles; ++i)
         {
             accelerations[i] = Physics.gravity;
         }
@@ -125,13 +130,15 @@ public class VerletCable : MonoBehaviour
     {
         for (int i = 0; i < numberOfParticles; ++i)
         {
-            //ref var p = ref currentXs[i];
+            ref var p = ref currentXs[i];
+
 
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
-            CollisionConstraint(i);
+            ParticleCollisionConstraint(i);
+            //CollisionConstraint(i);
 
-            ////project out
+            //project out
             //p = Vector3.Min(
             //    Vector3.Max(p, new Vector3(0, 0, 0)),
             //    new Vector3(100, 100, 100)
@@ -167,27 +174,74 @@ public class VerletCable : MonoBehaviour
 
         //points
         ref var p1 = ref currentXs[i];
-        ref var p2 = ref currentXs[i+1];
+        ref var p2 = ref currentXs[i + 1];
 
-        //points
-        //ref var p1_ = ref previousXs[i];
-        //ref var p2_ = ref previousXs[i + 1];
+        ref var p1_ = ref previousXs[i];
+        ref var p2_ = ref previousXs[i + 1];
 
-        //serial collision projection
+        //discrete checking and serial projection
         var cs = Physics.OverlapCapsule(p1, p2, radius);
         for (int j = 0; j < cs.Length; j++)
         {
             ref var c = ref cs[j];
 
             //Debug.Log(c.gameObject);
-            var f = 1f + radius;
             var c1 = c.ClosestPoint(p1);
             var c2 = c.ClosestPoint(p2);
 
-            p1 += p1 - c1;
-            p2 += p2 - c2;
+            var n1 = p1 - c1;
+            var n2 = p2 - c2;
+
+            var radius_ = radius + Physics.defaultContactOffset;
+
+            p1 += n1 + n1.normalized * radius_;
+            p2 += n2 + n2.normalized * radius_;
+
+            //to prevent bouncing
+            p1_ += n1.normalized * radius_;
+            p2_ += n2.normalized * radius_;
         }
 
+    }
+
+    //void ParticleCollisionConstraint(int i)
+    //{
+    //    //requires only one point, no check necessary
+
+    //    //continuous collision detection for particles
+    //    ref var p1 = ref currentXs[i];
+    //    ref var p1_ = ref previousXs[i];
+
+    //    RaycastHit hit;
+
+    //    //also keep cable radius in mind
+    //    var p1_p1 = p1 - p1_;
+
+    //    if (Physics.CapsuleCast(p1_ , p1_p1r, out hit, p1_p1r.magnitude))
+    //    {
+    //        var proj = hit.normal * (hit.distance);
+    //        p1 += proj;
+    //        //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
+    //    }
+    //}
+
+    void ParticleCollisionConstraint(int i)
+    {
+        ref var p = ref currentXs[i];
+
+        var cs = Physics.OverlapSphere(p, radius);
+        for (int j = 0; j < cs.Length; j++)
+        {
+            ref var c = ref cs[j];
+
+            var cp = c.ClosestPoint(p);
+
+            var correction = cp - p;
+
+            //Debug.Log(correction);
+
+            p += correction - correction.normalized * radius;
+        }
     }
 
     bool RequirePoints(int n, int i)
