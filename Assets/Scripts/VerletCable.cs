@@ -5,28 +5,33 @@ using UnityEngine;
 public class VerletCable : MonoBehaviour
 {
     [Range(2, 100)]
-    [Tooltip("Will determine how many Joints there will be")]
+    [Tooltip("Will determine how many Joints there will be. " +
+        "The more joints, the softer the cable will look.")]
     [SerializeField] private int resolution = 4;
     int numberOfParticles;
 
     [Tooltip("The radius of the cable")]
     [SerializeField] float radius = .25f;
 
+    [Tooltip("Increasing this will slow down (dampen) any movement.")]
     [Range(0f, 0.05f)]
     [SerializeField] float dampening = .01f;
 
-    [Range(0f, 2f)]
+    [Range(0f, .1f)]
     [Tooltip("Pseudo sliding friction")]
-    [SerializeField] float slidingFriction = .1f;
+    [SerializeField] float slidingFriction = .05f;
 
-    [Range(0f, 2f)]
+    [Range(0f, .1f)]
     [Tooltip("Pseudo static friction")]
-    [SerializeField] float staticFriction = .1f;
+    [SerializeField] float staticFriction = .01f;
 
     [Range(0, 25)]
     [Tooltip("The more iterations, the preciser " +
-        "the result. Increase this, if the cable falls through" +
-        "objects. (0 for Unity global configuration)")]
+        "the result. Increase this, if the cable falls through " +
+        "objects (or use a different collision check than discrete. " +
+        "The cable will appear " +
+        "stiffer with an increasing value " +
+        "(0 for Unity global configuration)")]
     [SerializeField] int solverIterations = 0;
 
     [Tooltip("Whether to show particle positions as cubes")]
@@ -35,6 +40,8 @@ public class VerletCable : MonoBehaviour
     float dt = 0f;
     float dt_squared = 0f;
     float restDistance = 0f;
+
+    float distanceCorrection = .001f;
 
     Vector3[] currentXs;
     Vector3[] previousXs;
@@ -122,6 +129,15 @@ public class VerletCable : MonoBehaviour
         }
     }
 
+    void PreventVibration()
+    {
+        for (int i = 0; i < numberOfParticles; ++i)
+        {
+            ref var x = ref currentXs[i];
+            ref var x_ = ref previousXs[i];
+        }
+    }
+
     void SetForces()
     {
         for (int i = 0; i < numberOfParticles; ++i)
@@ -139,8 +155,10 @@ public class VerletCable : MonoBehaviour
 
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
-            ParticleCollisionConstraint(i);
-            //CollisionConstraint(i);
+            ParticleCollisionConstraintConSim(i);
+            //ParticleCollisionConstraintContinuousSerial(i);
+            //ParticleCollisionConstraintContinuousSimultaneous(i);
+            //JointCollisionConstraint(i);
 
             //project out
             //p = Vector3.Min(
@@ -171,7 +189,7 @@ public class VerletCable : MonoBehaviour
     }
 
     //uses two points
-    void CollisionConstraint(int i)
+    void JointCollisionConstraint(int i)
     {
         //requirements
         if (RequirePoints(2, i)) return;
@@ -180,11 +198,9 @@ public class VerletCable : MonoBehaviour
         ref var p1 = ref currentXs[i];
         ref var p2 = ref currentXs[i + 1];
 
-        ref var p1_ = ref previousXs[i];
-        ref var p2_ = ref previousXs[i + 1];
-
         //discrete checking and serial projection
         var cs = Physics.OverlapCapsule(p1, p2, radius);
+
         for (int j = 0; j < cs.Length; j++)
         {
             ref var c = ref cs[j];
@@ -196,56 +212,112 @@ public class VerletCable : MonoBehaviour
             var n1 = p1 - c1;
             var n2 = p2 - c2;
 
-            var radius_ = radius + Physics.defaultContactOffset;
-
-            p1 += n1 + n1.normalized * radius_;
-            p2 += n2 + n2.normalized * radius_;
-
-            //to prevent bouncing
-            p1_ += n1.normalized * radius_;
-            p2_ += n2.normalized * radius_;
+            p1 += n1 - n1.normalized * radius;
+            p2 += n2 - n2.normalized * radius;
         }
 
     }
 
-    //void ParticleCollisionConstraint(int i)
-    //{
-    //    //requires only one point, no check necessary
-
-    //    //continuous collision detection for particles
-    //    ref var p1 = ref currentXs[i];
-    //    ref var p1_ = ref previousXs[i];
-
-    //    RaycastHit hit;
-
-    //    //also keep cable radius in mind
-    //    var p1_p1 = p1 - p1_;
-
-    //    if (Physics.CapsuleCast(p1_ , p1_p1r, out hit, p1_p1r.magnitude))
-    //    {
-    //        var proj = hit.normal * (hit.distance);
-    //        p1 += proj;
-    //        //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
-    //    }
-    //}
-
-    void ParticleCollisionConstraint(int i)
+    void ParticleCollisionConstraintContinuousSerial(int i)
     {
-        ref var p = ref currentXs[i];
-        ref var p_ = ref previousXs[i];
+        //requires only one point, no check necessary
 
-        var cs = Physics.OverlapSphere(p, radius);
+        //continuous collision detection for particles
+        ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
+
+        RaycastHit hit;
+
+        //also keep cable radius in mind
+        var p1_p1 = p1 - p1_;
+
+        if (Physics.SphereCast(p1_, radius, p1_p1, out hit, p1_p1.magnitude))
+        {
+            var correction = p1_p1 - (hit.normal * (hit.distance));
+            p1 -= correction;
+
+            Friction(i, correction);
+            //Debug.Log(correction);
+            //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
+        }
+    }
+
+    void ParticleCollisionConstraintContinuousSimultaneous(int i)
+    {
+        //requires only one point, no check necessary
+
+        //continuous collision detection for particles
+        ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
+
+        var cs = Physics.OverlapCapsule(p1_, p1, radius);
+
+        //also keep cable radius in mind
+        var p1_p1 = p1 - p1_;
+
         for (int j = 0; j < cs.Length; j++)
         {
             ref var c = ref cs[j];
 
-            var cp = c.ClosestPoint(p);
+            var cp = c.ClosestPoint(p1);
 
-            var correction = cp - p;
+            var correction = cp - p1;
 
-            p += correction - correction.normalized * radius;
+            p1 += correction - correction.normalized * radius;
 
             Friction(i, correction);
+        }
+    }
+
+    //void ParticleCollisionConstraint(int i)
+    //{
+    //    ref var p = ref currentXs[i];
+    //    ref var p_ = ref previousXs[i];
+
+    //    var cs = Physics.OverlapSphere(p, radius);
+    //    for (int j = 0; j < cs.Length; j++)
+    //    {
+    //        ref var c = ref cs[j];
+
+    //        var cpOuter = c.ClosestPoint(p_);
+    //        //var cpInner = c.ClosestPoint(p);
+
+    //        var correctionSurface = cpOuter - p;
+    //        //var correctionRadius = (cpInner - p).normalized * radius;
+
+    //        //var radDir = Mathf.Sign(Vector3.Dot(correction, p - p_));
+    //        //var radDir = 1f;
+
+    //        p = p + correctionSurface;
+
+    //        Debug.Log(correctionSurface);
+    //        //Friction(i, correction);
+    //    }
+    //}
+
+    void ParticleCollisionConstraintConSim(int i)
+    {
+        //requires only one point, no check necessary
+
+        //continuous collision detection for particles
+        ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
+
+        var p1_p1 = p1 - p1_;
+
+        var hits = Physics.SphereCastAll(p1_, radius, p1_p1, p1_p1.magnitude);
+
+        for (int j = 0; j < hits.Length; ++j)
+        {
+            ref var hit = ref hits[j];
+            if (hit.distance == 0f) continue; //according to Unity Docs
+            //var correction = p1_p1 - (hit.normal * (hit.distance));
+            //var rp = hit.normal * (hit.distance + radius);
+            p1 = hit.point + hit.normal * (radius + distanceCorrection);
+
+            //Friction(i, rp);
+            //Debug.Log(correction);
+            //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
         }
     }
 
@@ -255,15 +327,18 @@ public class VerletCable : MonoBehaviour
         ref var p = ref currentXs[i];
         ref var p_ = ref previousXs[i];
 
-        //sliding friction
+        //velocity
         var v = p - p_;
-        p_ += slidingFriction * correction.magnitude * v;
 
         //static friction
         if (v.magnitude < staticFriction)
         {
             p_ = p;
         }
+
+        //sliding friction
+        var cm = correction.magnitude;
+        p_ += ((cm * slidingFriction) / (cm + 1f)) * v;
     }
 
     bool RequirePoints(int n, int i)
@@ -283,7 +358,8 @@ public class VerletCable : MonoBehaviour
         for (int i = 0; i < solverIterations; ++i)
         {
             SatisfyConstraints();
-        }   
+        }
+        //PreventVibration();
     }
 
     void CreateDebugPoints()
