@@ -15,6 +15,14 @@ public class VerletCable : MonoBehaviour
     [Range(0f, 0.05f)]
     [SerializeField] float dampening = .01f;
 
+    [Range(0f, 2f)]
+    [Tooltip("Pseudo sliding friction")]
+    [SerializeField] float slidingFriction = .1f;
+
+    [Range(0f, 2f)]
+    [Tooltip("Pseudo static friction")]
+    [SerializeField] float staticFriction = .1f;
+
     [Range(0, 25)]
     [Tooltip("The more iterations, the preciser " +
         "the result. Increase this, if the cable falls through" +
@@ -28,8 +36,6 @@ public class VerletCable : MonoBehaviour
     float dt_squared = 0f;
     float restDistance = 0f;
 
-    CapsuleCollider capsuleCollider;
-
     Vector3[] currentXs;
     Vector3[] previousXs;
     Vector3[] accelerations;
@@ -40,8 +46,6 @@ public class VerletCable : MonoBehaviour
     {
         var line = GetComponent<CableInitialiser>();
         numberOfParticles = resolution + 1;
-
-        capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
 
         currentXs = SplineTools.AliasFunction(
             CatmullSpline.CreateCatmullSpline(line.controlPoints),
@@ -228,6 +232,7 @@ public class VerletCable : MonoBehaviour
     void ParticleCollisionConstraint(int i)
     {
         ref var p = ref currentXs[i];
+        ref var p_ = ref previousXs[i];
 
         var cs = Physics.OverlapSphere(p, radius);
         for (int j = 0; j < cs.Length; j++)
@@ -238,9 +243,26 @@ public class VerletCable : MonoBehaviour
 
             var correction = cp - p;
 
-            //Debug.Log(correction);
-
             p += correction - correction.normalized * radius;
+
+            Friction(i, correction);
+        }
+    }
+
+    void Friction(int i, Vector3 correction)
+    {
+        //points
+        ref var p = ref currentXs[i];
+        ref var p_ = ref previousXs[i];
+
+        //sliding friction
+        var v = p - p_;
+        p_ += slidingFriction * correction.magnitude * v;
+
+        //static friction
+        if (v.magnitude < staticFriction)
+        {
+            p_ = p;
         }
     }
 
