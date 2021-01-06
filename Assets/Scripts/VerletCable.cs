@@ -17,7 +17,7 @@ public class VerletCable : MonoBehaviour
     [Range(0f, 0.05f)]
     [SerializeField] float dampening = .01f;
 
-    [Range(0f, .1f)]
+    [Range(0f, 10f)]
     [Tooltip("Pseudo sliding friction")]
     [SerializeField] float slidingFriction = .05f;
 
@@ -156,9 +156,7 @@ public class VerletCable : MonoBehaviour
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
             ParticleCollisionConstraintConSim(i);
-            //ParticleCollisionConstraintContinuousSerial(i);
-            //ParticleCollisionConstraintContinuousSimultaneous(i);
-            //JointCollisionConstraint(i);
+            //JointCollisionConstraintConSim(i);
 
             //project out
             //p = Vector3.Min(
@@ -189,111 +187,44 @@ public class VerletCable : MonoBehaviour
     }
 
     //uses two points
-    void JointCollisionConstraint(int i)
+    void JointCollisionConstraintConSim(int i)
     {
         //requirements
         if (RequirePoints(2, i)) return;
 
-        //points
-        ref var p1 = ref currentXs[i];
-        ref var p2 = ref currentXs[i + 1];
-
-        //discrete checking and serial projection
-        var cs = Physics.OverlapCapsule(p1, p2, radius);
-
-        for (int j = 0; j < cs.Length; j++)
-        {
-            ref var c = ref cs[j];
-
-            //Debug.Log(c.gameObject);
-            var c1 = c.ClosestPoint(p1);
-            var c2 = c.ClosestPoint(p2);
-
-            var n1 = p1 - c1;
-            var n2 = p2 - c2;
-
-            p1 += n1 - n1.normalized * radius;
-            p2 += n2 - n2.normalized * radius;
-        }
-
-    }
-
-    void ParticleCollisionConstraintContinuousSerial(int i)
-    {
         //requires only one point, no check necessary
 
         //continuous collision detection for particles
         ref var p1 = ref currentXs[i];
         ref var p1_ = ref previousXs[i];
+        ref var p2 = ref currentXs[i+1];
+        ref var p2_ = ref previousXs[i+1];
 
-        RaycastHit hit;
-
-        //also keep cable radius in mind
         var p1_p1 = p1 - p1_;
+        var p2_p2 = p1 - p1_;
+        var midVec = (p1_p1 + p2_p2) / 2f;
+        var between = (p2_ - p1_).magnitude;
 
-        if (Physics.SphereCast(p1_, radius, p1_p1, out hit, p1_p1.magnitude))
+        var hits = Physics.CapsuleCastAll(p1_, p2_, radius, midVec, midVec.magnitude);
+
+        for (int j = 0; j < hits.Length; ++j)
         {
-            var correction = p1_p1 - (hit.normal * (hit.distance));
-            p1 -= correction;
+            ref var hit = ref hits[j];
+            if (hit.distance == 0f) continue; //according to Unity Docs
+            //var correction = p1_p1 - (hit.normal * (hit.distance));
+            var rp = hit.normal * (radius + distanceCorrection);
+            var lhd = ((rp - p1_).magnitude) / between;
+            var rhd = 1f - lhd;
 
-            Friction(i, correction);
+            p1 = hit.point + (lhd * rp);
+            p2 = hit.point + (rhd * rp);
+
+            //Friction(i, rp);
             //Debug.Log(correction);
             //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
         }
+
     }
-
-    void ParticleCollisionConstraintContinuousSimultaneous(int i)
-    {
-        //requires only one point, no check necessary
-
-        //continuous collision detection for particles
-        ref var p1 = ref currentXs[i];
-        ref var p1_ = ref previousXs[i];
-
-        var cs = Physics.OverlapCapsule(p1_, p1, radius);
-
-        //also keep cable radius in mind
-        var p1_p1 = p1 - p1_;
-
-        for (int j = 0; j < cs.Length; j++)
-        {
-            ref var c = ref cs[j];
-
-            var cp = c.ClosestPoint(p1);
-
-            var correction = cp - p1;
-
-            p1 += correction - correction.normalized * radius;
-
-            Friction(i, correction);
-        }
-    }
-
-    //void ParticleCollisionConstraint(int i)
-    //{
-    //    ref var p = ref currentXs[i];
-    //    ref var p_ = ref previousXs[i];
-
-    //    var cs = Physics.OverlapSphere(p, radius);
-    //    for (int j = 0; j < cs.Length; j++)
-    //    {
-    //        ref var c = ref cs[j];
-
-    //        var cpOuter = c.ClosestPoint(p_);
-    //        //var cpInner = c.ClosestPoint(p);
-
-    //        var correctionSurface = cpOuter - p;
-    //        //var correctionRadius = (cpInner - p).normalized * radius;
-
-    //        //var radDir = Mathf.Sign(Vector3.Dot(correction, p - p_));
-    //        //var radDir = 1f;
-
-    //        p = p + correctionSurface;
-
-    //        Debug.Log(correctionSurface);
-    //        //Friction(i, correction);
-    //    }
-    //}
 
     void ParticleCollisionConstraintConSim(int i)
     {
@@ -312,33 +243,36 @@ public class VerletCable : MonoBehaviour
             ref var hit = ref hits[j];
             if (hit.distance == 0f) continue; //according to Unity Docs
             //var correction = p1_p1 - (hit.normal * (hit.distance));
-            //var rp = hit.normal * (hit.distance + radius);
-            p1 = hit.point + hit.normal * (radius + distanceCorrection);
+            var rp = hit.normal * (radius + distanceCorrection);
+            p1 = hit.point + rp;
 
-            //Friction(i, rp);
+
+
+            //Slopes(i, hit);
             //Debug.Log(correction);
             //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
         }
     }
 
-    void Friction(int i, Vector3 correction)
+    void Slopes(int i, RaycastHit hit)
     {
         //points
         ref var p = ref currentXs[i];
         ref var p_ = ref previousXs[i];
 
-        //velocity
-        var v = p - p_;
+        //slope
+        var s = Vector3.ProjectOnPlane(hit.normal, p - p_);
+        p += s;
 
         //static friction
-        if (v.magnitude < staticFriction)
-        {
-            p_ = p;
-        }
+        //if (v.magnitude < staticFriction)
+        //{
+        //    p_ = p;
+        //}
 
         //sliding friction
-        var cm = correction.magnitude;
-        p_ += ((cm * slidingFriction) / (cm + 1f)) * v;
+        //var cm = hit.distance;
+        //p_ += ((cm * slidingFriction) / (cm + 1f)) * v;
     }
 
     bool RequirePoints(int n, int i)
