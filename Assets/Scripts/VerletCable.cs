@@ -41,6 +41,7 @@ public class VerletCable : MonoBehaviour
     float dt_squared = 0f;
     float restDistance = 0f;
 
+    //to prevent fallig through in collisions
     float distanceCorrection = .001f;
 
     Vector3[] currentXs;
@@ -282,7 +283,7 @@ public class VerletCable : MonoBehaviour
         }
 
         //decrease velocity "from behind"
-        p_ += slidingFriction * d * v;
+        p_ += slidingFriction * d * v / solverIterations;
 
         //sliding friction
         //var cm = hit.distance;

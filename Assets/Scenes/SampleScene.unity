@@ -743,7 +743,7 @@ MonoBehaviour:
   resolution: 30
   radius: 0.25
   dampening: 0
-  slidingFriction: 0.1
+  slidingFriction: 0.42
   staticFriction: 0.01
   solverIterations: 6
   debugMode: 1
