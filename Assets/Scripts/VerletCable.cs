@@ -17,11 +17,11 @@ public class VerletCable : MonoBehaviour
     [Range(0f, 0.05f)]
     [SerializeField] float dampening = .01f;
 
-    [Range(0f, 10f)]
+    [Range(0f, 2f)]
     [Tooltip("Pseudo sliding friction")]
-    [SerializeField] float slidingFriction = .05f;
+    [SerializeField] float slidingFriction = .01f;
 
-    [Range(0f, .1f)]
+    [Range(.01f, .1f)]
     [Tooltip("Pseudo static friction")]
     [SerializeField] float staticFriction = .01f;
 
@@ -243,8 +243,16 @@ public class VerletCable : MonoBehaviour
             ref var hit = ref hits[j];
             if (hit.distance == 0f) continue; //according to Unity Docs
             //var correction = p1_p1 - (hit.normal * (hit.distance));
-            var rp = hit.normal * (radius + distanceCorrection);
-            p1 = hit.point + rp;
+            //var rp = hit.normal * (hit.distance);
+            //p1 = rp + p1_;
+            var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+            p1 = hit.point + hit.normal * (radius + distanceCorrection) + tangent;
+
+            Friction(
+                i,
+                hit,
+                tangent
+            );
 
 
 
@@ -252,6 +260,33 @@ public class VerletCable : MonoBehaviour
             //Debug.Log(correction);
             //p1_ += hit.normal * (radius + Physics.defaultContactOffset);
         }
+    }
+
+    void Friction(int i, RaycastHit hit, Vector3 tangent)
+    {
+        //points
+        ref var p = ref currentXs[i];
+        ref var p_ = ref previousXs[i];
+
+        //penetration depth
+        var d = (p - (hit.point + tangent)).magnitude;
+
+        //velocity
+        var v = p - p_;
+
+        //prevent negative direction with static friction
+        if (v.magnitude < staticFriction)
+        {
+            p_ = p;
+            return;
+        }
+
+        //decrease velocity "from behind"
+        p_ += slidingFriction * d * v;
+
+        //sliding friction
+        //var cm = hit.distance;
+        //p_ += ((cm * slidingFriction) / (cm + 1f)) * v;
     }
 
     void Slopes(int i, RaycastHit hit)
