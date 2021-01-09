@@ -38,12 +38,18 @@ public class VerletCable : MonoBehaviour
         "(0 for Unity global configuration)")]
     [SerializeField] int solverIterations = 0;
 
+    [Tooltip("The layer to ignore for collision check.")]
+    [SerializeField] string ignoreLayer = "CableClickColliders";
+
     [Tooltip("Whether to show particle positions as cubes")]
     [SerializeField] bool debugMode = false;
 
     float dt = 0f;
     float dt_squared = 0f;
     float restDistance = 0f;
+
+    //dont collide with grabber colliders by ignoring player layer
+    int layerMask;
 
     //to prevent fallig through in collisions
     float distanceCorrection = .001f;
@@ -68,6 +74,9 @@ public class VerletCable : MonoBehaviour
     {
         var line = GetComponent<CableInitialiser>();
         numberOfParticles = GetNumberOfParticles();
+
+        //all except player
+        layerMask = ~LayerMask.GetMask(ignoreLayer);
 
         currentXs = SplineTools.AliasFunction(
             CatmullSpline.CreateCatmullSpline(line.controlPoints),
@@ -180,14 +189,13 @@ public class VerletCable : MonoBehaviour
         {
             ref var p = ref currentXs[i];
 
-
-            DistanceConstraint(i);
-            DistanceConstraint(i, 1);
-
             if (IsGrabbed(i))
             {
                 PositionContraint(i);
             }
+
+            DistanceConstraint(i);
+            DistanceConstraint(i, 1);
 
             //cable stiffness
             //of course we could precompute it, but that way,
@@ -295,6 +303,33 @@ public class VerletCable : MonoBehaviour
         }
     }
 
+    void JointCollisionConstraintDisSim(int i)
+    {
+        //requirements
+        if (RequirePoints(2, i)) return;
+
+        //continuous collision detection for particles
+        ref var p1 = ref currentXs[i];
+        ref var p2 = ref currentXs[i + 1];
+
+        var p1p2 = p2 - p1;
+
+        var hits = Physics.SphereCastAll(p1, radius, p1p2, p1p2.magnitude);
+
+        for (int j = 0; j < hits.Length; ++j)
+        {
+            ref var hit = ref hits[j];
+            if (hit.distance == 0f) continue; //according to Unity Docs
+            var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+            p1 = hit.point + hit.normal * (radius + distanceCorrection) +
+                tangent;
+
+            var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
+
+            Friction(i, penetrationDepth, tangent);
+        }
+    }
+
     void ParticleCollisionConstraintConSim(int i)
     {
         //requires only one point, no check necessary
@@ -305,7 +340,7 @@ public class VerletCable : MonoBehaviour
 
         var p1_p1 = p1 - p1_;
 
-        var hits = Physics.SphereCastAll(p1_, radius, p1_p1, p1_p1.magnitude);
+        var hits = Physics.SphereCastAll(p1_, radius, p1_p1, p1_p1.magnitude, layerMask);
 
         for (int j = 0; j < hits.Length; ++j)
         {

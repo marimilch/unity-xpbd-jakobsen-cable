@@ -38,7 +38,7 @@ public class DefaultGrabHandler : MonoBehaviour
         p1Start = verletCable.currentXs[jointNumber];
         p2Start = verletCable.currentXs[jointNumber + 1];
 
-        Debug.Log("Mouse start: " + start);
+        //Debug.Log("Mouse start: " + start);
     }
 
     private void OnMouseDrag()
@@ -67,9 +67,11 @@ public class DefaultGrabHandler : MonoBehaviour
 
         //Debug.Log("Mouse position world: " + mousePos);
 
-        return mainCamera
+        return Vector3.ProjectOnPlane(
+            mainCamera
             .ScreenPointToRay(mousePositionRaw)
-            .GetPoint(calcDistance())
-        ;
+            .GetPoint(calcDistance()),
+            Vector3.forward
+        );
     }
 }

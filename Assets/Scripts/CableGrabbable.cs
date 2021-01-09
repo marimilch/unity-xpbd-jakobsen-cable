@@ -9,10 +9,15 @@ public class CableGrabbable : MonoBehaviour
     [Tooltip("When enabled, the clickable joints will have a material.")]
     [SerializeField] bool debugMode = false;
 
+    [Tooltip("The radius of the clickable joints. If 0, the cable radius will be used.")]
+    [SerializeField] float clickRadius = 0f;
+
     Transform[] clickParents;
     Vector3[] currentPoints;
     int numberOfBones = 0;
     VerletCable verletCable;
+
+    int clickLayerId;
 
     //[SerializeField] MonoBehaviour grabHandler;
 
@@ -27,13 +32,24 @@ public class CableGrabbable : MonoBehaviour
 
         //if (!(grabHandler is IGrabHandler))
         //{
-        //    throw new UnityException("Grab Handler doess not implement IGrabHandler.");
+        //    throw new UnityException("Grab Handler does not implement IGrabHandler.");
         //}
 
         //Create Capsule Collider for each line
         numberOfBones = verletCable.GetNumberOfParticles() - 1;
         clickParents = new Transform[numberOfBones];
-        diameter = verletCable.radius * 2f;
+        diameter =
+            clickRadius == 0f ? verletCable.radius * 2f: clickRadius * 2f;
+
+        //dont collide with collision check of cable
+        clickLayerId = LayerMask.NameToLayer("CableClickColliders");
+        if (clickLayerId < 0)
+        {
+            clickLayerId = 0;
+            Debug.LogWarning("There seems to be no 'CableClickColliders' " +
+                "Layer. This will likely slow down the cable's " +
+                "collision detection.");
+        }
 
         //Initialize all child object colliders
         for (int i = 0; i < numberOfBones; ++i)
@@ -67,6 +83,8 @@ public class CableGrabbable : MonoBehaviour
         }
 
         o.name = "Cable Grab Handle " + i;
+
+        o.layer = clickLayerId;
 
         var gh = o.AddComponent<DefaultGrabHandler>();
         gh.verletCable = verletCable;
