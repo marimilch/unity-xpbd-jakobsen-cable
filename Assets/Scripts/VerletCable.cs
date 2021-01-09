@@ -356,33 +356,32 @@ public class VerletCable : MonoBehaviour
                 var p1c = p1 + correctionVector;
                 var p2c = p2 + correctionVector;
 
-                var hp1 = IntersectionLinePlane(p1, p1_, p1 + correctionVector, direction);
-                var hp2 = IntersectionLinePlane(p2, p2_, p2 + correctionVector, direction);
+                var t1 = Vector3.ProjectOnPlane(p1_p1, direction);
+                var t2 = Vector3.ProjectOnPlane(p2_p2, direction);
 
-                if (hp1 == Vector3.zero)
-                {
-                    var t1 = Vector3.ProjectOnPlane(p1 - hp1, direction);
-                    Friction(i, distance, t1);
-                }
-                else
-                {
-                    Friction(i, distance, p1 - p1_);
-                }
-
-                if (hp2 == Vector3.zero)
-                {
-                    var t2 = Vector3.ProjectOnPlane(p2 - hp2, direction);
-                    Friction(i, distance, t2);
-                }
-                else
-                {
-                    Friction(i, distance, p2 - p2_);
-                }
+                FrictionForNative(i, distance, t1);
+                FrictionForNative(i + 1, distance, t2);
 
                 p1 = p1c;
                 p2 = p2c;
             }
         }
+    }
+
+    void FrictionForNative(int i, float distance, Vector3 t1)
+    {
+        ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
+
+        var p1_p1 = p1 - p1_;
+
+        if (p1_p1.magnitude < staticFriction)
+        {
+            p1_ = p1;
+            return;
+        }
+
+        p1_ += t1 * slidingFriction * distance;
     }
 
     //uses two points
