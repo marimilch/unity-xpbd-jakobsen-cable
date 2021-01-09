@@ -36,7 +36,10 @@ public class DefaultGrabHandler : MonoBehaviour
         start = MouseOnPlane();
 
         p1Start = verletCable.currentXs[jointNumber];
-        p2Start = verletCable.currentXs[jointNumber + 1];
+
+        //constraining two poisitions causes interseection with otther bodies
+        //so we opt for one instead
+        //p2Start = verletCable.currentXs[jointNumber + 1];
 
         //Debug.Log("Mouse start: " + start);
     }
@@ -45,7 +48,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         var delta = MouseOnPlane() - start;
         verletCable.SetGrab(jointNumber, p1Start + delta);
-        verletCable.SetGrab(jointNumber + 1, p2Start + delta);
+        //verletCable.SetGrab(jointNumber + 1, p2Start + delta);
 
         //Debug.Log("Dragged to: " + MouseOnPlane(transform.position.z));
     }
@@ -58,7 +61,7 @@ public class DefaultGrabHandler : MonoBehaviour
     private void OnMouseUp()
     {
         verletCable.EndGrab(jointNumber);
-        verletCable.EndGrab(jointNumber + 1);
+        //verletCable.EndGrab(jointNumber + 1);
     }
 
     private Vector3 MouseOnPlane()
