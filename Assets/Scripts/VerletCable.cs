@@ -18,11 +18,14 @@ public class VerletCable : MonoBehaviour
 
     [Range(0f, 2f)]
     [Tooltip("Pseudo sliding friction")]
-    [SerializeField] float slidingFriction = .5f;
+    [SerializeField] float slidingFriction = .25f;
 
-    [Range(.01f, .1f)]
+    [Range(.1f, .5f)]
     [Tooltip("Pseudo static friction")]
     [SerializeField] float staticFriction = .01f;
+
+    [Tooltip("Prevents overly long cables due to high speeds. Set to 0 to disable.")]
+    public float teleportVelocity = 2f;
 
     [Range(0, 1f)]
     [SerializeField] float stiffness = .1f;
@@ -207,7 +210,7 @@ public class VerletCable : MonoBehaviour
 
             if (IsGrabbed(i))
             {
-                PositionContraint(i);
+                PositionConstraint(i);
             }
 
             DistanceConstraint(i);
@@ -226,6 +229,11 @@ public class VerletCable : MonoBehaviour
             //JointCollisionConstraintConSim(i);
 
             JointCollisionNative(i);
+
+            if (teleportVelocity != 0)
+            {
+                VelocityConstraint(i);
+            }
             //ParticleCollisionConstraintConSim(i);
 
             //project out
@@ -233,6 +241,19 @@ public class VerletCable : MonoBehaviour
             //    Vector3.Max(p, new Vector3(0, 0, 0)),
             //    new Vector3(100, 100, 100)
             //);
+        }
+    }
+
+    void VelocityConstraint(int i)
+    {
+        ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
+
+        var p1_p1 = p1 - p1_;
+
+        if (p1_p1.magnitude > teleportVelocity)
+        {
+            p1_ = p1 - p1_p1.normalized * teleportVelocity;
         }
     }
 
@@ -256,19 +277,6 @@ public class VerletCable : MonoBehaviour
         p2 -= cDir;
     }
 
-    //void AngleConstraint(int i)
-    //{
-    //    //requirements
-    //    if (RequirePoints(3, i)) return;
-
-    //    //points
-    //    ref var p1 = ref currentXs[i];
-    //    ref var p2 = ref currentXs[i + 1];
-    //    ref var p3 = ref currentXs[i + 2];
-
-
-    //}
-
     void SetCapsuleFromTo(Vector3 start, Vector3 end)
     {
         var capParent = cc.transform;
@@ -281,6 +289,25 @@ public class VerletCable : MonoBehaviour
         cc.height = delta.magnitude + 2f * radius;
     }
 
+    Vector3 IntersectionLinePlane(
+        Vector3 x1,
+        Vector3 x2,
+        Vector3 p0,
+        Vector3 n
+    )
+    {
+        var l0 = x1;
+        var l = (x2 - x1).normalized;
+        var dotln = Vector3.Dot(l, n);
+        if (dotln == 0f)
+        {
+            return Vector3.zero;
+        }
+        var d = Vector3.Dot(p0 - l0, n) / dotln;
+
+        return l0 + l * d;
+    }
+
     void JointCollisionNative(int i)
     {
         //requirements
@@ -288,7 +315,13 @@ public class VerletCable : MonoBehaviour
 
         //discrete collision detection for particles
         ref var p1 = ref currentXs[i];
+        ref var p1_ = ref previousXs[i];
         ref var p2 = ref currentXs[i + 1];
+        ref var p2_ = ref previousXs[i + 1];
+
+        //current velocities
+        var p1_p1 = p1 - p1_;
+        var p2_p2 = p2 - p2_;
 
         var cols = Physics.OverlapCapsule(p1, p2, radius, layerMask);
         SetCapsuleFromTo(p1, p2);
@@ -313,10 +346,41 @@ public class VerletCable : MonoBehaviour
                 out direction, out distance
             );
 
+            var correctionVector = direction * distance;
+
+            //var t1 = Vector3.Dot(direction, p1_p1) / distance * p1_p1;
+            //var t2 = Vector3.Dot(direction, p2_p2) / distance * p1_p1;
+
             if (overlapped)
             {
-                p1 += direction * distance;
-                p2 += direction * distance;
+                var p1c = p1 + correctionVector;
+                var p2c = p2 + correctionVector;
+
+                var hp1 = IntersectionLinePlane(p1, p1_, p1 + correctionVector, direction);
+                var hp2 = IntersectionLinePlane(p2, p2_, p2 + correctionVector, direction);
+
+                if (hp1 == Vector3.zero)
+                {
+                    var t1 = Vector3.ProjectOnPlane(p1 - hp1, direction);
+                    Friction(i, distance, t1);
+                }
+                else
+                {
+                    Friction(i, distance, p1 - p1_);
+                }
+
+                if (hp2 == Vector3.zero)
+                {
+                    var t2 = Vector3.ProjectOnPlane(p2 - hp2, direction);
+                    Friction(i, distance, t2);
+                }
+                else
+                {
+                    Friction(i, distance, p2 - p2_);
+                }
+
+                p1 = p1c;
+                p2 = p2c;
             }
         }
     }
@@ -447,7 +511,7 @@ public class VerletCable : MonoBehaviour
         return hits.Length > 0;
     }
 
-    void PositionContraint(int i)
+    void PositionConstraint(int i)
     {
         ref var p1 = ref currentXs[i];
 
@@ -512,7 +576,7 @@ public class VerletCable : MonoBehaviour
         }
 
         //decrease velocity "from behind"
-        p_ += slidingFriction * d * v / solverIterations;
+        p_ += slidingFriction * d * tangent / solverIterations;
 
         //sliding friction
         //var cm = hit.distance;

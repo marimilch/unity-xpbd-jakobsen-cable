@@ -48,6 +48,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         var delta = MouseOnPlane() - start;
         verletCable.SetGrab(jointNumber, p1Start + delta);
+        verletCable.teleportVelocity = 2f;
         //verletCable.SetGrab(jointNumber + 1, p2Start + delta);
 
         //Debug.Log("Dragged to: " + MouseOnPlane(transform.position.z));
@@ -61,6 +62,8 @@ public class DefaultGrabHandler : MonoBehaviour
     private void OnMouseUp()
     {
         verletCable.EndGrab(jointNumber);
+        verletCable.teleportVelocity = 0f;
+
         //verletCable.EndGrab(jointNumber + 1);
     }
 

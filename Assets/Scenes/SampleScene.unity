@@ -666,9 +666,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controlPoints:
-  - {x: -36.76276, y: 0, z: 0}
+  - {x: -19.945065, y: 0, z: 0}
   - {x: 15.133837, y: 8.560249, z: -7.4731784}
-  - {x: 38.838985, y: 0, z: 0}
+  - {x: 12.076823, y: 0, z: 0}
 --- !u!4 &1277680813
 Transform:
   m_ObjectHideFlags: 0
@@ -743,13 +743,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e29bd5680ee2f47429dd5a8796c0f834, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 10
+  resolution: 175
   radius: 0.25
   dampening: 0
-  slidingFriction: 0.5
-  staticFriction: 0.01
-  stiffness: 0.113
-  solverIterations: 5
+  slidingFriction: 0.24
+  staticFriction: 0.1
+  teleportVelocity: 0
+  stiffness: 0.289
+  solverIterations: 6
   ignoreLayer: CableClickColliders
   debugMode: 0
   currentXs: []
