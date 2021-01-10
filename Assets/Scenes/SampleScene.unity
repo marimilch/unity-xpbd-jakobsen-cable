@@ -666,9 +666,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controlPoints:
-  - {x: -6.897418, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
   - {x: 7.74232, y: 6.169998, z: -14.879412}
-  - {x: 23.41529, y: 0, z: 0}
+  - {x: 12, y: 0, z: 0}
 --- !u!4 &1277680813
 Transform:
   m_ObjectHideFlags: 0
@@ -749,6 +749,7 @@ MonoBehaviour:
   slidingFriction: 2.98
   staticFriction: 1
   maxVelocity: 0
+  breakMagnitude: 10
   preventTunnelingOnGrabbed: 1
   stiffness: 0
   solverIterations: 12

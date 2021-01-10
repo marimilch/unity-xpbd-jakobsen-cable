@@ -27,6 +27,10 @@ public class JakobsenCable : MonoBehaviour
     [Tooltip("Prevents overly long cables due to high speeds. Set to 0 to disable.")]
     public float maxVelocity = 0f;
 
+    [Tooltip("Magnitude, that causes soft grabbed particles to break.")]
+    [SerializeField]
+    public float breakMagnitude = 1f;
+
     [Tooltip("Enables continuous collision check on " +
         "grabbed particles to prevent tunneling when moved " +
         "through colliders.")]
@@ -64,7 +68,7 @@ public class JakobsenCable : MonoBehaviour
 
     //for grabbing
     Vector3[] constrainedPositions;
-    bool[] hasConstrainedPosition;
+    int[] constraintPositionLevel;
 
     [HideInInspector]
     public Vector3[] currentXs;
@@ -108,7 +112,7 @@ public class JakobsenCable : MonoBehaviour
 
         previousXs = new Vector3[numberOfParticles];
         constrainedPositions = new Vector3[numberOfParticles];
-        hasConstrainedPosition = new bool[numberOfParticles];
+        constraintPositionLevel = new int[numberOfParticles];
         //accelerations = new Vector3[numberOfParticles];
 
         currentXs.CopyTo(previousXs, 0);
@@ -122,7 +126,7 @@ public class JakobsenCable : MonoBehaviour
         dt_squared = dt * dt;
 
         constrainedPositions[0] = Vector3.zero;
-        hasConstrainedPosition[0] = true;
+        constraintPositionLevel[0] = 1;
     }
 
     void AddCollisionHelper()
@@ -137,20 +141,20 @@ public class JakobsenCable : MonoBehaviour
         cc.radius = radius; //set radius
     }
 
-    public void SetGrab(int i, Vector3 to)
+    public void SetGrab(int i, Vector3 to, bool soft = true)
     {
-        hasConstrainedPosition[i] = true;
+        constraintPositionLevel[i] = soft ? 1 : 2;
         constrainedPositions[i] = to;
     }
 
     public void EndGrab(int i)
     {
-        hasConstrainedPosition[i] = false;
+        constraintPositionLevel[i] = 0;
     }
 
     public bool IsGrabbed(int i)
     {
-        return hasConstrainedPosition[i];
+        return constraintPositionLevel[i] > 0;
     }
 
     void FixedUpdate()
@@ -162,7 +166,7 @@ public class JakobsenCable : MonoBehaviour
             solverIterations = Physics.defaultSolverIterations;
         }
 
-        Simulate();
+        Simulate(0, numberOfParticles);
         if (debugMode)
         {
             SetDebugPoints();
@@ -177,9 +181,9 @@ public class JakobsenCable : MonoBehaviour
         }
     }
 
-    void Integrate()
+    void Integrate(int start, int end)
     {
-        for (int i = 0; i < numberOfParticles; ++i)
+        for (int i = start; i < end; ++i)
         {
             ref var x = ref currentXs[i];
             ref var x_ = ref previousXs[i];
@@ -200,7 +204,7 @@ public class JakobsenCable : MonoBehaviour
         }
     }
 
-    void SatisfyConstraints()
+    void SatisfyConstraints(int start, int end)
     {
         for (int i = 0; i < numberOfParticles; ++i)
         {
@@ -388,6 +392,15 @@ public class JakobsenCable : MonoBehaviour
     void PositionConstraint(int i)
     {
         ref var p1 = ref currentXs[i];
+        ref var cp = ref constrainedPositions[i];
+
+        if (
+            constraintPositionLevel[i] == 1 &&
+            (p1 - cp).magnitude > breakMagnitude)
+        {
+            EndGrab(i);
+            return;
+        };
 
         p1 = constrainedPositions[i];
     }
@@ -463,12 +476,12 @@ public class JakobsenCable : MonoBehaviour
         return true;
     }
 
-    void Simulate()
+    void Simulate(int start, int end)
     {
-        Integrate();
+        Integrate(start, end);
         for (int i = 0; i < solverIterations; ++i)
         {
-            SatisfyConstraints();
+            SatisfyConstraints(start, end);
         }
     }
 

@@ -53,7 +53,7 @@ public class DefaultGrabHandler : MonoBehaviour
     private void OnMouseDrag()
     {
         var delta = MouseOnPlane() - start;
-        verletCable.SetGrab(jointNumber, p1Start + delta);
+        verletCable.SetGrab(jointNumber, p1Start + delta, false);
         verletCable.maxVelocity = maxVelocityOnMove;
         //verletCable.SetGrab(jointNumber + 1, p2Start + delta);
 
