@@ -79,12 +79,24 @@ public class DefaultGrabHandler : MonoBehaviour
 
         //Debug.Log("Mouse position world: " + mousePos);
 
-        return Vector3.ProjectOnPlane(
-            mainCamera
-            .ScreenPointToRay(mousePositionRaw)
-            .GetPoint(calcDistance()),
-            Vector3.forward
-        );
+        //Debug.Log(mainCamera.ScreenToWorldPoint(mousePositionRaw));
+
+        //mainCamera.ScreenToWorldPoint(mousePositionRaw) does not work,
+        // so workaround with ray
+        return IntersectionLinePlane(
+            mainCamera.transform.position,
+            mainCamera.ScreenPointToRay(mousePositionRaw).GetPoint(.01f),
+            verletCable.currentXs[jointNumber],
+            mainCamera.transform.TransformDirection(Vector3.forward)
+        )
+           ;
+
+        //return Vector3.ProjectOnPlane(
+        //    mainCamera
+        //    .ScreenPointToRay(mousePositionRaw)
+        //    .GetPoint(calcDistance()),
+        //    Vector3.forward
+        //);
     }
 
     Vector3 IntersectionLinePlane(
