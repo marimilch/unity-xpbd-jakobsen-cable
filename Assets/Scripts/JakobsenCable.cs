@@ -25,7 +25,7 @@ public class JakobsenCable : MonoBehaviour
     [SerializeField] float staticFriction = .01f;
 
     [Tooltip("Prevents overly long cables due to high speeds. Set to 0 to disable.")]
-    public float maxVelocity = 2f;
+    public float maxVelocity = 0f;
 
     [Tooltip("Enables continuous collision check on " +
         "grabbed particles to prevent tunneling when moved " +
@@ -218,6 +218,10 @@ public class JakobsenCable : MonoBehaviour
                 PositionConstraint(i);
             }
 
+            ParticleCollisionConstraintConSim(i);
+
+            JointCollisionNative(i);
+
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
 
@@ -233,7 +237,7 @@ public class JakobsenCable : MonoBehaviour
 
             //JointCollisionConstraintConSim(i);
 
-            JointCollisionNative(i);
+            
 
             if (maxVelocity != 0)
             {
@@ -468,7 +472,7 @@ public class JakobsenCable : MonoBehaviour
     //    }
     //}
 
-    bool ParticleCollisionConstraintConSim(int i)
+    void ParticleCollisionConstraintConSim(int i)
     {
         //requires only one point, no check necessary
 
@@ -480,29 +484,24 @@ public class JakobsenCable : MonoBehaviour
 
         var hits = Physics.SphereCastAll(p1_, radius, p1_p1, p1_p1.magnitude, layerMask);
 
-        //for (int j = 0; j < hits.Length; ++j)
-        //{
-        //    ref var hit = ref hits[j];
-        //    if (hit.distance == 0f) continue; //according to Unity Docs
-        //    var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-        //    p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-        //        tangent;
+        for (int j = 0; j < hits.Length; ++j)
+        {
+            ref var hit = ref hits[j];
+            if (hit.distance == 0f) continue; //according to Unity Docs
+            var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+            p1 = hit.point + hit.normal * (radius + distanceCorrection) +
+                tangent;
 
-        //    var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
+            var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
 
-        //    Friction(i, penetrationDepth, tangent);
-        //}
+            //Friction(i, penetrationDepth, tangent);
+        }
 
-        return hits.Length > 0;
+        //return hits.Length > 0;
     }
 
     void PositionConstraint(int i)
     {
-        if (preventTunnelingOnGrabbed && ParticleCollisionConstraintConSim(i))
-        {
-            return;
-        }
-
         ref var p1 = ref currentXs[i];
 
         p1 = constrainedPositions[i];
