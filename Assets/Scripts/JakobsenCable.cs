@@ -215,10 +215,6 @@ public class JakobsenCable : MonoBehaviour
                 PositionConstraint(i);
             }
 
-            ParticleCollisionConstraintConSim(i);
-
-            JointCollisionNative(i);
-
             //connect particles and prevent folding through itself
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
@@ -237,6 +233,9 @@ public class JakobsenCable : MonoBehaviour
             {
                 VelocityConstraint(i);
             }
+
+            ParticleCollisionConstraintConSim(i);
+            JointCollisionNative(i);
         }
     }
 
