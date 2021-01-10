@@ -4,13 +4,13 @@ using System.Collections;
 public class CablePointsProvider : MonoBehaviour
 {
     LineRenderer lineRenderer;
-    VerletCable verletCable;
+    JakobsenCable verletCable;
 
     // Use this for initialization
     void Start()
     {
         lineRenderer = GetComponent<LineRenderer>();
-        verletCable = GetComponent<VerletCable>();
+        verletCable = GetComponent<JakobsenCable>();
         if (!lineRenderer || !verletCable)
         {
             throw new UnityException("Line Renderer or Verlet Cable missing.");

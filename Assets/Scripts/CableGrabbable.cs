@@ -9,13 +9,15 @@ public class CableGrabbable : MonoBehaviour
     [Tooltip("When enabled, the clickable joints will have a material.")]
     [SerializeField] bool debugMode = false;
 
+    [SerializeField] float maxVelocityOnMove = .1f;
+
     [Tooltip("The radius of the clickable joints. If 0, the cable radius will be used.")]
     [SerializeField] float clickRadius = 0f;
 
     Transform[] clickParents;
     Vector3[] currentPoints;
     int numberOfBones = 0;
-    VerletCable verletCable;
+    JakobsenCable verletCable;
 
     int clickLayerId;
 
@@ -24,7 +26,7 @@ public class CableGrabbable : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        verletCable = GetComponent<VerletCable>();
+        verletCable = GetComponent<JakobsenCable>();
         if (!verletCable)
         {
             throw new UnityException("Verlet Cable missing.");
@@ -89,6 +91,7 @@ public class CableGrabbable : MonoBehaviour
         var gh = o.AddComponent<DefaultGrabHandler>();
         gh.verletCable = verletCable;
         gh.jointNumber = i;
+        gh.maxVelocityOnMove = maxVelocityOnMove;
 
         var t = o.transform;
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class VerletCable : MonoBehaviour
+public class JakobsenCable : MonoBehaviour
 {
     [Tooltip("Will determine how many Joints there will be. " +
         "The more joints, the softer the cable will look.")]
@@ -25,7 +25,12 @@ public class VerletCable : MonoBehaviour
     [SerializeField] float staticFriction = .01f;
 
     [Tooltip("Prevents overly long cables due to high speeds. Set to 0 to disable.")]
-    public float teleportVelocity = 2f;
+    public float maxVelocity = 2f;
+
+    [Tooltip("Enables continuous collision check on " +
+        "grabbed particles to prevent tunneling when moved " +
+        "through colliders.")]
+    public bool preventTunnelingOnGrabbed = true;
 
     [Range(0, 1f)]
     [SerializeField] float stiffness = .1f;
@@ -230,7 +235,7 @@ public class VerletCable : MonoBehaviour
 
             JointCollisionNative(i);
 
-            if (teleportVelocity != 0)
+            if (maxVelocity != 0)
             {
                 VelocityConstraint(i);
             }
@@ -251,9 +256,9 @@ public class VerletCable : MonoBehaviour
 
         var p1_p1 = p1 - p1_;
 
-        if (p1_p1.magnitude > teleportVelocity)
+        if (p1_p1.magnitude > maxVelocity)
         {
-            p1_ = p1 - p1_p1.normalized * teleportVelocity;
+            p1_ = p1 - p1_p1.normalized * maxVelocity;
         }
     }
 
@@ -287,25 +292,6 @@ public class VerletCable : MonoBehaviour
 
         capParent.LookAt(end);
         cc.height = delta.magnitude + 2f * radius;
-    }
-
-    Vector3 IntersectionLinePlane(
-        Vector3 x1,
-        Vector3 x2,
-        Vector3 p0,
-        Vector3 n
-    )
-    {
-        var l0 = x1;
-        var l = (x2 - x1).normalized;
-        var dotln = Vector3.Dot(l, n);
-        if (dotln == 0f)
-        {
-            return Vector3.zero;
-        }
-        var d = Vector3.Dot(p0 - l0, n) / dotln;
-
-        return l0 + l * d;
     }
 
     void JointCollisionNative(int i)
@@ -385,102 +371,102 @@ public class VerletCable : MonoBehaviour
     }
 
     //uses two points
-    void JointCollisionConstraintConSim(int i)
-    {
-        //requirements
-        if (RequirePoints(2, i)) return;
+    //void JointCollisionConstraintConSim(int i)
+    //{
+    //    //requirements
+    //    if (RequirePoints(2, i)) return;
 
-        //requires only one point, no check necessary
+    //    //requires only one point, no check necessary
 
-        //continuous collision detection for particles
-        ref var p1 = ref currentXs[i];
-        ref var p1_ = ref previousXs[i];
-        ref var p2 = ref currentXs[i+1];
-        ref var p2_ = ref previousXs[i+1];
+    //    //continuous collision detection for particles
+    //    ref var p1 = ref currentXs[i];
+    //    ref var p1_ = ref previousXs[i];
+    //    ref var p2 = ref currentXs[i+1];
+    //    ref var p2_ = ref previousXs[i+1];
 
-        var p1p2 = p2 - p1;
+    //    var p1p2 = p2 - p1;
 
-        var p1_p1 = p1 - p1_;
-        var p2_p2 = p2 - p2_;
-        var midVec = p1 - p1_ + (p2 - p1 - p2_ + p1_) / 2f;
+    //    var p1_p1 = p1 - p1_;
+    //    var p2_p2 = p2 - p2_;
+    //    var midVec = p1 - p1_ + (p2 - p1 - p2_ + p1_) / 2f;
 
-        var p1m = p1 - midVec;
-        var p2m = p2 - midVec;
+    //    var p1m = p1 - midVec;
+    //    var p2m = p2 - midVec;
 
-        var hits = Physics.CapsuleCastAll(
-            p1m,
-            p2m,
-            radius,
-            midVec,
-            midVec.magnitude,
-            layerMask
-        );
+    //    var hits = Physics.CapsuleCastAll(
+    //        p1m,
+    //        p2m,
+    //        radius,
+    //        midVec,
+    //        midVec.magnitude,
+    //        layerMask
+    //    );
 
-        for (int j = 0; j < hits.Length; ++j)
-        {
-            ref var hit = ref hits[j];
-            if (hit.distance == 0f) continue; //according to Unity Docs
+    //    for (int j = 0; j < hits.Length; ++j)
+    //    {
+    //        ref var hit = ref hits[j];
+    //        if (hit.distance == 0f) continue; //according to Unity Docs
 
-            var t1 = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-            p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-                t1;
+    //        var t1 = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+    //        p1 = hit.point + hit.normal * (radius + distanceCorrection) +
+    //            t1;
 
-            var pd1 = (p1 - (hit.point + t1)).magnitude;
+    //        var pd1 = (p1 - (hit.point + t1)).magnitude;
 
-            var t2 = Vector3.ProjectOnPlane(p2 - hit.point, hit.normal);
-            p2 = hit.point + hit.normal * (radius + distanceCorrection) +
-                t2;
+    //        var t2 = Vector3.ProjectOnPlane(p2 - hit.point, hit.normal);
+    //        p2 = hit.point + hit.normal * (radius + distanceCorrection) +
+    //            t2;
 
-            var pd2 = (p2 - (hit.point + t2)).magnitude;
+    //        var pd2 = (p2 - (hit.point + t2)).magnitude;
 
-            //Friction(i, penetrationDepth, tangent);
+    //        //Friction(i, penetrationDepth, tangent);
 
-            //var projectDist = Vector3.Dot(hit.point - p1, p1p2) / p1p2.magnitude;
-            //var p = p1 + p1p2.normalized * projectDist;
-            //var pq = hit.point - p;
+    //        //var projectDist = Vector3.Dot(hit.point - p1, p1p2) / p1p2.magnitude;
+    //        //var p = p1 + p1p2.normalized * projectDist;
+    //        //var pq = hit.point - p;
 
-            //p1 += pq + pq.normalized * (distanceCorrection*2f + radius);
-            //p2 += pq + pq.normalized * (distanceCorrection*2f + radius);
+    //        //p1 += pq + pq.normalized * (distanceCorrection*2f + radius);
+    //        //p2 += pq + pq.normalized * (distanceCorrection*2f + radius);
 
-            //Debug.Log(pq);
+    //        //Debug.Log(pq);
 
-            //Friction(i, hit, t1);
-            //Friction(i + 1, hit, t2);
-        }
-    }
+    //        //Friction(i, hit, t1);
+    //        //Friction(i + 1, hit, t2);
+    //    }
+    //}
 
-    void JointCollisionConstraintDisSim(int i)
-    {
-        //requirements
-        if (RequirePoints(2, i)) return;
+    //void JointCollisionConstraintDisSim(int i)
+    //{
+    //    //requirements
+    //    if (RequirePoints(2, i)) return;
 
-        //continuous collision detection for particles
-        ref var p1 = ref currentXs[i];
-        ref var p1_ = ref previousXs[i];
-        ref var p2 = ref currentXs[i + 1];
-        ref var p2_ = ref previousXs[i + 1];
+    //    //continuous collision detection for particles
+    //    ref var p1 = ref currentXs[i];
+    //    ref var p1_ = ref previousXs[i];
+    //    ref var p2 = ref currentXs[i + 1];
+    //    ref var p2_ = ref previousXs[i + 1];
 
-        var p1p2 = p2 - p1;
+    //    var p1p2 = p2 - p1;
 
-        var p1_p1 = p1 - p1_;
-        var p2_p2 = p2 - p2_;
-        var midVecDir = ((p1_p1 + p2_p2) / 2f).normalized;
+    //    var p1_p1 = p1 - p1_;
+    //    var p2_p2 = p2 - p2_;
+    //    var midVecDir = ((p1_p1 + p2_p2) / 2f).normalized;
 
-        var hits = Physics.SphereCastAll(p1, radius, p1p2, p1p2.magnitude);
+    //    var hits = Physics.SphereCastAll(p1, radius, p1p2, p1p2.magnitude);
 
-        for (int j = 0; j < hits.Length; ++j)
-        {
-            ref var hit = ref hits[j];
-            if (hit.distance == 0f) continue; //according to Unity Docs
-            var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-            var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
+    //    for (int j = 0; j < hits.Length; ++j)
+    //    {
+    //        ref var hit = ref hits[j];
+    //        if (hit.distance == 0f) continue; //according to Unity Docs
+    //        var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+    //        var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
 
-            p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-                tangent;
+    //        p1 = hit.point + hit.normal * (radius + distanceCorrection) +
+    //            tangent;
 
-            Friction(i, penetrationDepth, tangent);
-        }
-    }
+    //        Friction(i, penetrationDepth, tangent);
+    //    }
+    //}
 
     bool ParticleCollisionConstraintConSim(int i)
     {
@@ -494,27 +480,34 @@ public class VerletCable : MonoBehaviour
 
         var hits = Physics.SphereCastAll(p1_, radius, p1_p1, p1_p1.magnitude, layerMask);
 
-        for (int j = 0; j < hits.Length; ++j)
-        {
-            ref var hit = ref hits[j];
-            if (hit.distance == 0f) continue; //according to Unity Docs
-            var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-            p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-                tangent;
+        //for (int j = 0; j < hits.Length; ++j)
+        //{
+        //    ref var hit = ref hits[j];
+        //    if (hit.distance == 0f) continue; //according to Unity Docs
+        //    var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
+        //    p1 = hit.point + hit.normal * (radius + distanceCorrection) +
+        //        tangent;
 
-            var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
+        //    var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
 
-            Friction(i, penetrationDepth, tangent);
-        }
+        //    Friction(i, penetrationDepth, tangent);
+        //}
 
         return hits.Length > 0;
     }
 
     void PositionConstraint(int i)
     {
+        if (preventTunnelingOnGrabbed && ParticleCollisionConstraintConSim(i))
+        {
+            return;
+        }
+
         ref var p1 = ref currentXs[i];
 
         p1 = constrainedPositions[i];
+
+        
     }
 
     void ParticleCollisionConstraintDisSim(int i)

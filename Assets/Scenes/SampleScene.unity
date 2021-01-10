@@ -743,14 +743,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e29bd5680ee2f47429dd5a8796c0f834, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 175
+  resolution: 20
   radius: 0.25
   dampening: 0
   slidingFriction: 2
   staticFriction: 0.1
-  teleportVelocity: 0
+  maxVelocity: 2
   stiffness: 0.289
-  solverIterations: 6
+  solverIterations: 2
   ignoreLayer: CableClickColliders
   debugMode: 0
   currentXs: []
@@ -872,6 +872,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   debugMode: 0
+  maxVelocityOnMove: 0.01
   clickRadius: 2
 --- !u!1 &1684011717
 GameObject:

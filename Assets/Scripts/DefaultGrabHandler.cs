@@ -4,7 +4,7 @@ using System.Collections;
 public class DefaultGrabHandler : MonoBehaviour
 {
     public int jointNumber;
-    public VerletCable verletCable;
+    public JakobsenCable verletCable;
     Camera mainCamera;
     Transform mt;
 
@@ -14,6 +14,8 @@ public class DefaultGrabHandler : MonoBehaviour
     Vector3 start;
 
     Vector3 mousePositionRaw;
+
+    public float maxVelocityOnMove = .25f;
 
     private void Start()
     {
@@ -48,7 +50,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         var delta = MouseOnPlane() - start;
         verletCable.SetGrab(jointNumber, p1Start + delta);
-        verletCable.teleportVelocity = 2f;
+        verletCable.maxVelocity = maxVelocityOnMove;
         //verletCable.SetGrab(jointNumber + 1, p2Start + delta);
 
         //Debug.Log("Dragged to: " + MouseOnPlane(transform.position.z));
@@ -62,7 +64,7 @@ public class DefaultGrabHandler : MonoBehaviour
     private void OnMouseUp()
     {
         verletCable.EndGrab(jointNumber);
-        verletCable.teleportVelocity = 0f;
+        verletCable.maxVelocity = 0f;
 
         //verletCable.EndGrab(jointNumber + 1);
     }
