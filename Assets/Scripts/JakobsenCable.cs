@@ -16,11 +16,11 @@ public class JakobsenCable : MonoBehaviour
     [Range(0f, 0.05f)]
     [SerializeField] float dampening = 0f;
 
-    [Range(0f, 2f)]
+    [Range(0f, 4f)]
     [Tooltip("Pseudo sliding friction")]
     [SerializeField] float slidingFriction = .25f;
 
-    [Range(.1f, .5f)]
+    [Range(.1f, 1f)]
     [Tooltip("Pseudo static friction")]
     [SerializeField] float staticFriction = .01f;
 
@@ -120,6 +120,9 @@ public class JakobsenCable : MonoBehaviour
 
         dt = Time.fixedDeltaTime;
         dt_squared = dt * dt;
+
+        constrainedPositions[0] = Vector3.zero;
+        hasConstrainedPosition[0] = true;
     }
 
     void AddCollisionHelper()
@@ -154,7 +157,6 @@ public class JakobsenCable : MonoBehaviour
     {
         // Set to default if necessary here already,
         // so it can be changed while play mode.
-
         if (solverIterations < 1)
         {
             solverIterations = Physics.defaultSolverIterations;
@@ -195,16 +197,7 @@ public class JakobsenCable : MonoBehaviour
             ;
 
             x_ = temp;
-            //x_ = (x - temp).magnitude > Physics.defaultContactOffset ? temp : x;
         }
-    }
-
-    void SetForces()
-    {
-        //for (int i = 0; i < numberOfParticles; ++i)
-        //{
-        //    accelerations[i] = Physics.gravity;
-        //}
     }
 
     void SatisfyConstraints()
@@ -222,6 +215,7 @@ public class JakobsenCable : MonoBehaviour
 
             JointCollisionNative(i);
 
+            //connect particles and prevent folding through itself
             DistanceConstraint(i);
             DistanceConstraint(i, 1);
 
@@ -235,21 +229,10 @@ public class JakobsenCable : MonoBehaviour
                 DistanceConstraint(i, stiffnessFactor);
             }
 
-            //JointCollisionConstraintConSim(i);
-
-            
-
             if (maxVelocity != 0)
             {
                 VelocityConstraint(i);
             }
-            //ParticleCollisionConstraintConSim(i);
-
-            //project out
-            //p = Vector3.Min(
-            //    Vector3.Max(p, new Vector3(0, 0, 0)),
-            //    new Vector3(100, 100, 100)
-            //);
         }
     }
 
@@ -374,104 +357,6 @@ public class JakobsenCable : MonoBehaviour
         p1_ += t1 * slidingFriction * distance;
     }
 
-    //uses two points
-    //void JointCollisionConstraintConSim(int i)
-    //{
-    //    //requirements
-    //    if (RequirePoints(2, i)) return;
-
-    //    //requires only one point, no check necessary
-
-    //    //continuous collision detection for particles
-    //    ref var p1 = ref currentXs[i];
-    //    ref var p1_ = ref previousXs[i];
-    //    ref var p2 = ref currentXs[i+1];
-    //    ref var p2_ = ref previousXs[i+1];
-
-    //    var p1p2 = p2 - p1;
-
-    //    var p1_p1 = p1 - p1_;
-    //    var p2_p2 = p2 - p2_;
-    //    var midVec = p1 - p1_ + (p2 - p1 - p2_ + p1_) / 2f;
-
-    //    var p1m = p1 - midVec;
-    //    var p2m = p2 - midVec;
-
-    //    var hits = Physics.CapsuleCastAll(
-    //        p1m,
-    //        p2m,
-    //        radius,
-    //        midVec,
-    //        midVec.magnitude,
-    //        layerMask
-    //    );
-
-    //    for (int j = 0; j < hits.Length; ++j)
-    //    {
-    //        ref var hit = ref hits[j];
-    //        if (hit.distance == 0f) continue; //according to Unity Docs
-
-    //        var t1 = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-    //        p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-    //            t1;
-
-    //        var pd1 = (p1 - (hit.point + t1)).magnitude;
-
-    //        var t2 = Vector3.ProjectOnPlane(p2 - hit.point, hit.normal);
-    //        p2 = hit.point + hit.normal * (radius + distanceCorrection) +
-    //            t2;
-
-    //        var pd2 = (p2 - (hit.point + t2)).magnitude;
-
-    //        //Friction(i, penetrationDepth, tangent);
-
-    //        //var projectDist = Vector3.Dot(hit.point - p1, p1p2) / p1p2.magnitude;
-    //        //var p = p1 + p1p2.normalized * projectDist;
-    //        //var pq = hit.point - p;
-
-    //        //p1 += pq + pq.normalized * (distanceCorrection*2f + radius);
-    //        //p2 += pq + pq.normalized * (distanceCorrection*2f + radius);
-
-    //        //Debug.Log(pq);
-
-    //        //Friction(i, hit, t1);
-    //        //Friction(i + 1, hit, t2);
-    //    }
-    //}
-
-    //void JointCollisionConstraintDisSim(int i)
-    //{
-    //    //requirements
-    //    if (RequirePoints(2, i)) return;
-
-    //    //continuous collision detection for particles
-    //    ref var p1 = ref currentXs[i];
-    //    ref var p1_ = ref previousXs[i];
-    //    ref var p2 = ref currentXs[i + 1];
-    //    ref var p2_ = ref previousXs[i + 1];
-
-    //    var p1p2 = p2 - p1;
-
-    //    var p1_p1 = p1 - p1_;
-    //    var p2_p2 = p2 - p2_;
-    //    var midVecDir = ((p1_p1 + p2_p2) / 2f).normalized;
-
-    //    var hits = Physics.SphereCastAll(p1, radius, p1p2, p1p2.magnitude);
-
-    //    for (int j = 0; j < hits.Length; ++j)
-    //    {
-    //        ref var hit = ref hits[j];
-    //        if (hit.distance == 0f) continue; //according to Unity Docs
-    //        var tangent = Vector3.ProjectOnPlane(p1 - hit.point, hit.normal);
-    //        var penetrationDepth = (p1 - (hit.point + tangent)).magnitude;
-
-    //        p1 = hit.point + hit.normal * (radius + distanceCorrection) +
-    //            tangent;
-
-    //        Friction(i, penetrationDepth, tangent);
-    //    }
-    //}
-
     void ParticleCollisionConstraintConSim(int i)
     {
         //requires only one point, no check necessary
@@ -505,8 +390,6 @@ public class JakobsenCable : MonoBehaviour
         ref var p1 = ref currentXs[i];
 
         p1 = constrainedPositions[i];
-
-        
     }
 
     void ParticleCollisionConstraintDisSim(int i)
@@ -568,10 +451,6 @@ public class JakobsenCable : MonoBehaviour
 
         //decrease velocity "from behind"
         p_ += slidingFriction * d * tangent / solverIterations;
-
-        //sliding friction
-        //var cm = hit.distance;
-        //p_ += ((cm * slidingFriction) / (cm + 1f)) * v;
     }
 
     bool RequirePoints(int n, int i)
@@ -586,13 +465,11 @@ public class JakobsenCable : MonoBehaviour
 
     void Simulate()
     {
-        SetForces();
         Integrate();
         for (int i = 0; i < solverIterations; ++i)
         {
             SatisfyConstraints();
         }
-        //PreventVibration();
     }
 
     void CreateDebugPoints()

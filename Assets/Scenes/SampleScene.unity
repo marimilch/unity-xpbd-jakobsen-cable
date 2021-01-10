@@ -367,7 +367,7 @@ GameObject:
   - component: {fileID: 547483450}
   - component: {fileID: 547483449}
   m_Layer: 0
-  m_Name: Capsule (1)
+  m_Name: zeppelin
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -440,7 +440,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 547483448}
   m_LocalRotation: {x: 0.5693163, y: -0.18901634, z: 0.06011141, w: 0.79783356}
-  m_LocalPosition: {x: -54.2, y: 13.917539, z: -4.2}
+  m_LocalPosition: {x: -8.6, y: -13.1, z: -5.1}
   m_LocalScale: {x: 4.8083396, y: 12.1107645, z: 4.8083396}
   m_Children: []
   m_Father: {fileID: 0}
@@ -743,13 +743,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39513d8993e644baab43372f597c8fa4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 20
+  resolution: 40
   radius: 0.25
   dampening: 0
-  slidingFriction: 2
-  staticFriction: 0.5
+  slidingFriction: 2.98
+  staticFriction: 1
   maxVelocity: 0
-  preventTunnelingOnGrabbed: 0
+  preventTunnelingOnGrabbed: 1
   stiffness: 0
   solverIterations: 12
   ignoreLayer: CableClickColliders
@@ -873,7 +873,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   debugMode: 0
-  maxVelocityOnMove: 0.01
+  maxVelocityOnMove: 1
   clickRadius: 2
 --- !u!1 &1684011717
 GameObject:
