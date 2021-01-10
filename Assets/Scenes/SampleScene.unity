@@ -642,10 +642,10 @@ GameObject:
   - component: {fileID: 1277680814}
   - component: {fileID: 1277680815}
   - component: {fileID: 1277680816}
-  - component: {fileID: 1277680817}
   - component: {fileID: 1277680818}
   - component: {fileID: 1277680819}
   - component: {fileID: 1277680820}
+  - component: {fileID: 1277680817}
   m_Layer: 0
   m_Name: Line
   m_TagString: Untagged
@@ -740,17 +740,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 1277680811}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e29bd5680ee2f47429dd5a8796c0f834, type: 3}
+  m_Script: {fileID: 11500000, guid: 39513d8993e644baab43372f597c8fa4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 20
+  resolution: 30
   radius: 0.25
   dampening: 0
   slidingFriction: 2
-  staticFriction: 0.1
+  staticFriction: 0.01
   maxVelocity: 2
-  stiffness: 0.289
-  solverIterations: 2
+  preventTunnelingOnGrabbed: 0
+  stiffness: 0
+  solverIterations: 12
   ignoreLayer: CableClickColliders
   debugMode: 0
   currentXs: []

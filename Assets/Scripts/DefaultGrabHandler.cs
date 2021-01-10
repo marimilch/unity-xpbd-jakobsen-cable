@@ -15,16 +15,19 @@ public class DefaultGrabHandler : MonoBehaviour
 
     Vector3 mousePositionRaw;
 
+    //float initialStiffness;
+
     public float maxVelocityOnMove = .25f;
 
     private void Start()
     {
         mainCamera = Camera.main;
         mt = mainCamera.transform;
+        //initialStiffness = verletCable.stiffness;
 
         if (!verletCable)
         {
-            throw new UnityException("Verlet Cable in parent missing.");
+            throw new UnityException("Jakobsen Cable in parent missing.");
         }
     }
 
@@ -38,6 +41,7 @@ public class DefaultGrabHandler : MonoBehaviour
         start = MouseOnPlane();
 
         p1Start = verletCable.currentXs[jointNumber];
+        //verletCable.stiffness = 0f;
 
         //constraining two poisitions causes interseection with otther bodies
         //so we opt for one instead
@@ -65,7 +69,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         verletCable.EndGrab(jointNumber);
         verletCable.maxVelocity = 0f;
-
+        //verletCable.stiffness = initialStiffness;
         //verletCable.EndGrab(jointNumber + 1);
     }
 
@@ -81,5 +85,24 @@ public class DefaultGrabHandler : MonoBehaviour
             .GetPoint(calcDistance()),
             Vector3.forward
         );
+    }
+
+    Vector3 IntersectionLinePlane(
+        Vector3 x1,
+        Vector3 x2,
+        Vector3 p0,
+        Vector3 n
+    )
+    {
+        var l0 = x1;
+        var l = (x2 - x1).normalized;
+        var dotln = Vector3.Dot(l, n);
+        if (dotln == 0f)
+        {
+            return Vector3.zero;
+        }
+        var d = Vector3.Dot(p0 - l0, n) / dotln;
+
+        return l0 + l * d;
     }
 }

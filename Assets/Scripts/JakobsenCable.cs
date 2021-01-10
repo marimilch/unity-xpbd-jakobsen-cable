@@ -33,7 +33,7 @@ public class JakobsenCable : MonoBehaviour
     public bool preventTunnelingOnGrabbed = true;
 
     [Range(0, 1f)]
-    [SerializeField] float stiffness = .1f;
+    public float stiffness = .1f;
     int stiffnessFactor;
 
     Vector3 grav = Physics.gravity;
@@ -288,7 +288,7 @@ public class JakobsenCable : MonoBehaviour
 
         //Set mid of capsule to mid of in-between vector
         var delta = end - start;
-        capParent.position = start + (delta / 2);
+        capParent.position = start + (delta / 2f);
 
         capParent.LookAt(end);
         cc.height = delta.magnitude + 2f * radius;
