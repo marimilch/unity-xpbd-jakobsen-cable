@@ -166,7 +166,7 @@ public class JakobsenCable : MonoBehaviour
             solverIterations = Physics.defaultSolverIterations;
         }
 
-        Simulate(0, numberOfParticles);
+        Simulate();
         if (debugMode)
         {
             SetDebugPoints();
@@ -181,9 +181,9 @@ public class JakobsenCable : MonoBehaviour
         }
     }
 
-    void Integrate(int start, int end)
+    void Integrate()
     {
-        for (int i = start; i < end; ++i)
+        for (int i = 0; i < numberOfParticles; ++i)
         {
             ref var x = ref currentXs[i];
             ref var x_ = ref previousXs[i];
@@ -204,7 +204,7 @@ public class JakobsenCable : MonoBehaviour
         }
     }
 
-    void SatisfyConstraints(int start, int end)
+    void SatisfyConstraints()
     {
         for (int i = 0; i < numberOfParticles; ++i)
         {
@@ -234,7 +234,10 @@ public class JakobsenCable : MonoBehaviour
                 VelocityConstraint(i);
             }
 
-            ParticleCollisionConstraintConSim(i);
+            if (preventTunnelingOnGrabbed)
+            {
+                ParticleCollisionConstraintConSim(i);
+            }
             JointCollisionNative(i);
         }
     }
@@ -291,13 +294,7 @@ public class JakobsenCable : MonoBehaviour
 
         //discrete collision detection for particles
         ref var p1 = ref currentXs[i];
-        ref var p1_ = ref previousXs[i];
         ref var p2 = ref currentXs[i + 1];
-        ref var p2_ = ref previousXs[i + 1];
-
-        //current velocities
-        var p1_p1 = p1 - p1_;
-        var p2_p2 = p2 - p2_;
 
         var cols = Physics.OverlapCapsule(p1, p2, radius, layerMask);
         SetCapsuleFromTo(p1, p2);
@@ -329,35 +326,34 @@ public class JakobsenCable : MonoBehaviour
 
             if (overlapped)
             {
-                var p1c = p1 + correctionVector;
-                var p2c = p2 + correctionVector;
+                p1 += correctionVector;
+                p2 += correctionVector;
 
-                var t1 = Vector3.ProjectOnPlane(p1_p1, direction);
-                var t2 = Vector3.ProjectOnPlane(p2_p2, direction);
+                FrictionForNative(i, distance, direction);
+                FrictionForNative(i + 1, distance, direction);
 
-                FrictionForNative(i, distance, t1);
-                FrictionForNative(i + 1, distance, t2);
-
-                p1 = p1c;
-                p2 = p2c;
+                //p1 = p1c;
+                //p2 = p2c;
             }
         }
     }
 
-    void FrictionForNative(int i, float distance, Vector3 t1)
+    void FrictionForNative(int i, float distance, Vector3 direction)
     {
         ref var p1 = ref currentXs[i];
         ref var p1_ = ref previousXs[i];
 
         var p1_p1 = p1 - p1_;
 
-        if (p1_p1.magnitude < staticFriction)
+        var t1 = Vector3.ProjectOnPlane(p1_p1, direction);
+
+        if (t1.magnitude < staticFriction)
         {
             p1_ = p1;
             return;
         }
 
-        p1_ += t1 * slidingFriction * distance;
+        p1_ += t1.normalized * slidingFriction * distance;
     }
 
     void ParticleCollisionConstraintConSim(int i)
@@ -475,12 +471,12 @@ public class JakobsenCable : MonoBehaviour
         return true;
     }
 
-    void Simulate(int start, int end)
+    void Simulate()
     {
-        Integrate(start, end);
+        Integrate();
         for (int i = 0; i < solverIterations; ++i)
         {
-            SatisfyConstraints(start, end);
+            SatisfyConstraints();
         }
     }
 

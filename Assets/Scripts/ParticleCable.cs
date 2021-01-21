@@ -92,12 +92,12 @@ public class ParticleCable : MonoBehaviour
         for (int i = e; i < numberOfJoints - e; i++)
         {
             var pT = capParents[i];
-            var qT = capParents[i + 1];
+            var qT = capParents[i + distanceFactor];
 
             var sf = CalcSpringForce(pT.position, qT.position, distanceFactor);
             var df = CalcDampForce(
                 rigidbodies[i].velocity,
-                rigidbodies[i + 1].velocity
+                rigidbodies[i + distanceFactor].velocity
             );
 
             currentForcesBetween[i] = sf + df;
@@ -115,7 +115,7 @@ public class ParticleCable : MonoBehaviour
                 forceMode
             );
             rigidbodies[numberOfParticles - 1 - i].AddForce(
-                -currentForcesBetween[numberOfJoints - 1 - bi],
+                -currentForcesBetween[numberOfJoints - reach - bi],
                 forceMode
             );
         }
@@ -123,7 +123,7 @@ public class ParticleCable : MonoBehaviour
         for (int i = reach; i < numberOfParticles - reach; i++)
         {
             rigidbodies[i].AddForce(
-                currentForcesBetween[i] - currentForcesBetween[i - 1],
+                currentForcesBetween[i] - currentForcesBetween[i - reach],
                 forceMode
             );
         }

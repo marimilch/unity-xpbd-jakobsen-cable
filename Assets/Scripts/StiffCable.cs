@@ -89,7 +89,7 @@ public class StiffCable : MonoBehaviour
         for (int i = e; i < numberOfJoints - e; i++)
         {
             var pT = capParents[i];
-            var qT = capParents[i + 1];
+            var qT = capParents[i + distanceFactor];
 
             currentForcesBetween[i] = CalcDistance(
                 pT.position,
@@ -117,7 +117,7 @@ public class StiffCable : MonoBehaviour
         {
             rigidbodies[i].MovePosition(
                 capParents[i].position + 
-                currentForcesBetween[i] - currentForcesBetween[i - 1]
+                currentForcesBetween[i] - currentForcesBetween[i - reach]
             );
         }
     }

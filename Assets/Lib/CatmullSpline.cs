@@ -7,7 +7,6 @@ public class CatmullSpline
 {
     static readonly float TANGENT_MAG_FACTOR = .25f;
 
-
     public static Returns<Vector3>.Expects<float> CreateCatmullSpline(Vector3[] controlPoints)
     {
         return CreateCubicBezierSplineFunction(
@@ -53,7 +52,6 @@ public class CatmullSpline
 
         //Debug.Log("r size: " + rLen);
         //Debug.Log("len: " + len);
-
         return r;
     }
 
