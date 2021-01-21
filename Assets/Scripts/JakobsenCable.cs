@@ -353,7 +353,7 @@ public class JakobsenCable : MonoBehaviour
             return;
         }
 
-        p1_ += t1.normalized * slidingFriction * distance;
+        p1_ += p1_p1.normalized * slidingFriction * distance;
     }
 
     void ParticleCollisionConstraintConSim(int i)
