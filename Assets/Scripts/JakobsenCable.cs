@@ -331,9 +331,6 @@ public class JakobsenCable : MonoBehaviour
 
                 FrictionForNative(i, distance, direction);
                 FrictionForNative(i + 1, distance, direction);
-
-                //p1 = p1c;
-                //p2 = p2c;
             }
         }
     }
