@@ -4,7 +4,7 @@ using System;
 using UnityEngine;
 using Functional;
 
-public class XPBDVerletCable : MonoBehaviour
+public class XPBDVerletCable : MonoBehaviour, Cable
 {
     [Tooltip("Will determine how many Joints there will be. " +
         "The more joints, the softer the cable will look.")]
@@ -70,6 +70,9 @@ public class XPBDVerletCable : MonoBehaviour
     //constraints array
     Constraint[] constraints;
 
+    //for position dependant constraints
+    int particleIndex;
+
     //for grabbing
     Vector3[] constrainedPositions;
     int[] constraintPositionLevel;
@@ -82,9 +85,26 @@ public class XPBDVerletCable : MonoBehaviour
 
     Transform[] debugPoints;
 
+    public float GetRadius()
+    {
+        return radius;
+    }
+
     public int GetNumberOfParticles()
     {
+        //numberOfParticles might not be available yet
         return resolution + 1;
+    }
+
+    public Vector3[] GetParticles()
+    {
+        return currentXs;
+    }
+
+    public void SetMaxVelocity(float v)
+    {
+        //not convention, but demo purposes only
+        maxVelocity = v;
     }
 
     void Start()
@@ -128,8 +148,13 @@ public class XPBDVerletCable : MonoBehaviour
         dt = Time.fixedDeltaTime;
         dt_squared = dt * dt;
 
+        InitConstraints();
+    }
+
+    void InitConstraints()
+    {
         //initialize contraints
-        constraints = new Constraint[3];
+        constraints = new Constraint[4];
 
         //single distance constraint
         constraints[0] = new Constraint(2, (vs) =>
@@ -183,8 +208,30 @@ public class XPBDVerletCable : MonoBehaviour
                 correctionVector += distance * direction;
             }
 
-            return correctionVector.magnitude; 
+            return correctionVector.magnitude;
         }, stiffness, false);
+
+
+        //position constraint
+        constraints[3] = new Constraint(1, (vs) =>
+        {
+            var i = particleIndex;
+
+            var p1 = vs[0];
+            ref var cp = ref constrainedPositions[i];
+
+            if (
+                (constraintPositionLevel[i] == 1 &&
+                (p1 - cp).magnitude > breakMagnitude)  
+            )
+            {
+                EndGrab(i);
+            };
+
+            if (!IsGrabbed(i)) return 0f;
+
+            return (p1 - cp).magnitude;
+        });
     }
 
     void AddCollisionHelper()
@@ -267,6 +314,7 @@ public class XPBDVerletCable : MonoBehaviour
     {
         for (int i = 0; i < numberOfParticles; ++i)
         {
+            particleIndex = i;
             for (int j = 0; j < constraints.Length; ++j)
             {
                 constraints[j].ProjectConstraint(i, ref currentXs);

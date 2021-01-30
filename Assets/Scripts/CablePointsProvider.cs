@@ -4,26 +4,32 @@ using System.Collections;
 public class CablePointsProvider : MonoBehaviour
 {
     LineRenderer lineRenderer;
-    JakobsenCable verletCable;
+    Cable verletCable;
 
     // Use this for initialization
     void Start()
     {
         lineRenderer = GetComponent<LineRenderer>();
-        verletCable = GetComponent<JakobsenCable>();
-        if (!lineRenderer || !verletCable)
+
+        //get first active CablePointsProvider
+        verletCable = gameObject.GetActiveInterface<Cable>();
+
+        if (!lineRenderer || verletCable == null)
         {
-            throw new UnityException("Line Renderer or Verlet Cable missing.");
+            throw new UnityException(
+                "Line Renderer or Verlet " +
+                "Cable missing or not active."
+            );
         }
 
         lineRenderer.positionCount = verletCable.GetNumberOfParticles();
-        var diameter = 2f * verletCable.radius;
+        var diameter = 2f * verletCable.GetRadius();
         lineRenderer.startWidth = diameter;
         lineRenderer.endWidth = diameter;
     }
 
     private void FixedUpdate()
     {
-        lineRenderer.SetPositions(verletCable.currentXs);
+        lineRenderer.SetPositions(verletCable.GetParticles());
     }
 }

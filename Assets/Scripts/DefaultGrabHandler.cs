@@ -4,7 +4,7 @@ using System.Collections;
 public class DefaultGrabHandler : MonoBehaviour
 {
     public int jointNumber;
-    public JakobsenCable verletCable;
+    public Cable verletCable;
     Camera mainCamera;
     Transform mt;
 
@@ -25,7 +25,7 @@ public class DefaultGrabHandler : MonoBehaviour
         mt = mainCamera.transform;
         //initialStiffness = verletCable.stiffness;
 
-        if (!verletCable)
+        if (verletCable == null)
         {
             throw new UnityException("Jakobsen Cable in parent missing.");
         }
@@ -40,7 +40,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         start = MouseOnPlane();
 
-        p1Start = verletCable.currentXs[jointNumber];
+        p1Start = verletCable.GetParticles()[jointNumber];
         //verletCable.stiffness = 0f;
 
         //constraining two poisitions causes interseection with otther bodies
@@ -54,7 +54,7 @@ public class DefaultGrabHandler : MonoBehaviour
     {
         var delta = MouseOnPlane() - start;
         verletCable.SetGrab(jointNumber, p1Start + delta, false);
-        verletCable.maxVelocity = maxVelocityOnMove;
+        verletCable.SetMaxVelocity(maxVelocityOnMove);
         //verletCable.SetGrab(jointNumber + 1, p2Start + delta);
 
         //Debug.Log("Dragged to: " + MouseOnPlane(transform.position.z));
@@ -68,7 +68,7 @@ public class DefaultGrabHandler : MonoBehaviour
     private void OnMouseUp()
     {
         verletCable.EndGrab(jointNumber);
-        verletCable.maxVelocity = 0f;
+        verletCable.SetMaxVelocity(0f);
         //verletCable.stiffness = initialStiffness;
         //verletCable.EndGrab(jointNumber + 1);
     }
@@ -86,7 +86,7 @@ public class DefaultGrabHandler : MonoBehaviour
         return IntersectionLinePlane(
             mainCamera.transform.position,
             mainCamera.ScreenPointToRay(mousePositionRaw).GetPoint(.01f),
-            verletCable.currentXs[jointNumber],
+            verletCable.GetParticles()[jointNumber],
             mainCamera.transform.TransformDirection(Vector3.forward)
         )
            ;

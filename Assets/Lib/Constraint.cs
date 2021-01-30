@@ -15,9 +15,12 @@ class Constraint
     float lambda = 0f;
     bool extended;
 
+    //internal
     Returns<float>.Expects<Vector3[]> constraintFunction;
     Returns<Vector3[]>.Expects<Vector3[]> constraintSatisfier;
     Returns<Vector3[]>.Expects<Vector3[]> nabla;
+
+    bool active = true;
 
     void BaseInit(
         int cardinality_,
@@ -61,6 +64,9 @@ class Constraint
 
     public void ProjectConstraint(int i, ref Vector3[] ps)
     {
+        //only when active
+        if (!active) return;
+
         //ensure required points available
         if (RequirePoints(cardinality, i, ref ps)) return;
 

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class JakobsenCable : MonoBehaviour
+public class JakobsenCable : MonoBehaviour, Cable
 {
     [Tooltip("Will determine how many Joints there will be. " +
         "The more joints, the softer the cable will look.")]
@@ -80,8 +80,26 @@ public class JakobsenCable : MonoBehaviour
 
     Transform[] debugPoints;
 
-    public int GetNumberOfParticles(){
+    public float GetRadius()
+    {
+        return radius;
+    }
+
+    public int GetNumberOfParticles()
+    {
+        //numberOfParticles might not be available yet
         return resolution + 1;
+    }
+
+    public Vector3[] GetParticles()
+    {
+        return currentXs;
+    }
+
+    public void SetMaxVelocity(float v)
+    {
+        //not convention, but demo purposes only
+        maxVelocity = v;
     }
 
     void Start()

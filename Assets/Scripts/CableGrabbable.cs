@@ -17,7 +17,7 @@ public class CableGrabbable : MonoBehaviour
     Transform[] clickParents;
     Vector3[] currentPoints;
     int numberOfBones = 0;
-    JakobsenCable verletCable;
+    Cable verletCable;
 
     int clickLayerId;
 
@@ -26,10 +26,12 @@ public class CableGrabbable : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        verletCable = GetComponent<JakobsenCable>();
-        if (!verletCable)
+        //get first active CablePointsProvider
+        verletCable = gameObject.GetActiveInterface<Cable>();
+
+        if (verletCable == null)
         {
-            throw new UnityException("Verlet Cable missing.");
+            throw new UnityException("Cable missing.");
         }
 
         //if (!(grabHandler is IGrabHandler))
@@ -41,7 +43,7 @@ public class CableGrabbable : MonoBehaviour
         numberOfBones = verletCable.GetNumberOfParticles() - 1;
         clickParents = new Transform[numberOfBones];
         diameter =
-            clickRadius == 0f ? verletCable.radius * 2f: clickRadius * 2f;
+            clickRadius == 0f ? verletCable.GetRadius() * 2f: clickRadius * 2f;
 
         //dont collide with collision check of cable
         clickLayerId = LayerMask.NameToLayer("CableClickColliders");
@@ -63,7 +65,7 @@ public class CableGrabbable : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        currentPoints = verletCable.currentXs;
+        currentPoints = verletCable.GetParticles();
         for (int i = 0; i < numberOfBones; ++i)
         {
             SetClickableFromTo(
