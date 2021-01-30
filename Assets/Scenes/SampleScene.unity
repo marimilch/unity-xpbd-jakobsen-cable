@@ -944,7 +944,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1277680811}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4d52c494237514638bb721e390042ca9, type: 3}
   m_Name: 
@@ -964,18 +964,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d6a5bd6a04124f7cb36bc9a577f44bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  resolution: 27
+  resolution: 40
   radius: 0.25
   dampening: 0
   slidingFriction: 0.25
   staticFriction: 0.01
   maxVelocity: 0
   breakMagnitude: 1
-  preventTunnelingOnGrabbed: 1
+  preventTunnelingOnGrabbed: 0
   stiffness: 0.1
-  solverIterations: 1
+  precision: 0.00001
+  solverIterations: 0
   ignoreLayer: CableClickColliders
-  debugMode: 1
+  debugMode: 0
   currentXs: []
 --- !u!1 &1413018198
 GameObject:

@@ -26,7 +26,8 @@ public class XPBDVerletCable : MonoBehaviour, Cable
     [Tooltip("Pseudo static friction")]
     [SerializeField] float staticFriction = .01f;
 
-    [Tooltip("Prevents overly long cables due to high speeds. Set to 0 to disable.")]
+    [Tooltip("Prevents overly long cables on low solverIterations" +
+        " due to high speeds. Set to 0 to disable.")]
     public float maxVelocity = 0f;
 
     [Tooltip("Magnitude, that causes soft grabbed particles to break.")]
@@ -38,8 +39,11 @@ public class XPBDVerletCable : MonoBehaviour, Cable
         "through colliders.")]
     public bool preventTunnelingOnGrabbed = true;
 
-    [Range(0, 1f)]
-    public float stiffness = .1f;
+    [Range(.1f, 1f)]
+    public float stiffness = .5f;
+
+    [Range(.00001f, 0.01f)]
+    public float precision = .0001f;
 
     Vector3 grav = Physics.gravity;
 
@@ -53,6 +57,10 @@ public class XPBDVerletCable : MonoBehaviour, Cable
 
     [Tooltip("The layer to ignore for collision check.")]
     [SerializeField] string ignoreLayer = "CableClickColliders";
+
+    [Tooltip("When enabled uses XPBD instead of PBD, which prevents" +
+        " accuracy- and timescale-stiffness effect.")]
+    [SerializeField] bool extended = true;
 
     [Tooltip("Whether to show particle positions as cubes")]
     [SerializeField] bool debugMode = false;
@@ -153,6 +161,11 @@ public class XPBDVerletCable : MonoBehaviour, Cable
 
     void InitConstraints()
     {
+        //Debug.Log("num: " + numberOfParticles);
+
+        //precision
+        Constraint.precision = precision;
+
         //initialize contraints
         constraints = new Constraint[4];
 
@@ -160,13 +173,13 @@ public class XPBDVerletCable : MonoBehaviour, Cable
         constraints[0] = new Constraint(2, (vs) =>
         {
             return Mathf.Abs((vs[0] - vs[1]).magnitude) - restDistance;
-        });
+        }, stiffness, true, extended, numberOfParticles);
 
         //double distance constraint
         constraints[1] = new Constraint(3, (vs) =>
         {
             return Mathf.Abs((vs[0] - vs[2]).magnitude) - 2f * restDistance;
-        });
+        }, stiffness, true, extended, numberOfParticles);
 
         //collision constraint
         constraints[2] = new Constraint(2, (vs) =>
@@ -206,10 +219,20 @@ public class XPBDVerletCable : MonoBehaviour, Cable
                 );
 
                 correctionVector += distance * direction;
+
+                //the most inelegant way, but time is short
+                if (overlapped)
+                {
+                    p1 += correctionVector;
+                    p2 += correctionVector;
+
+                    FrictionForNative(particleIndex, distance, direction);
+                    FrictionForNative(particleIndex + 1, distance, direction);
+                }
             }
 
             return correctionVector.magnitude;
-        }, stiffness, false);
+        }, stiffness, false, extended, numberOfParticles); //no manual sttiffnes for collision solving
 
 
         //position constraint
@@ -231,7 +254,7 @@ public class XPBDVerletCable : MonoBehaviour, Cable
             if (!IsGrabbed(i)) return 0f;
 
             return (p1 - cp).magnitude;
-        });
+        }, stiffness, true, extended, numberOfParticles);
     }
 
     void AddCollisionHelper()
@@ -293,8 +316,6 @@ public class XPBDVerletCable : MonoBehaviour, Cable
         {
             ref var x = ref currentXs[i];
             ref var x_ = ref previousXs[i];
-            //ref var a = ref accelerations[i];
-            //var a = Physics.gravity;
 
             var temp = x;
 
@@ -317,39 +338,11 @@ public class XPBDVerletCable : MonoBehaviour, Cable
             particleIndex = i;
             for (int j = 0; j < constraints.Length; ++j)
             {
+                //so stiffness can be updated live
+                constraints[j].stiffness = stiffness;
+
                 constraints[j].ProjectConstraint(i, ref currentXs);
             }
-            //ref var p = ref currentXs[i];
-
-            //if (IsGrabbed(i))
-            //{
-            //    PositionConstraint(i);
-            //}
-
-            //connect particles and prevent folding through itself
-            //DistanceConstraint(i);
-            //DistanceConstraint(i, 1);
-
-            ////cable stiffness
-            ////of course we could precompute it, but that way,
-            ////it can be changed live
-            //stiffnessFactor = (int)(stiffness * resolution);
-            ////Debug.Log(stiffnessFactor);
-            //if (stiffnessFactor >= 2)
-            //{
-            //    DistanceConstraint(i, stiffnessFactor);
-            //}
-
-            //if (maxVelocity != 0)
-            //{
-            //    VelocityConstraint(i);
-            //}
-
-            //if (preventTunnelingOnGrabbed)
-            //{
-            //    ParticleCollisionConstraintConSim(i);
-            //}
-            //JointCollisionNative(i);
         }
     }
 
@@ -585,6 +578,12 @@ public class XPBDVerletCable : MonoBehaviour, Cable
         for (int i = 0; i < solverIterations; ++i)
         {
             SatisfyConstraints();
+        }
+
+        for (int j = 0; j < constraints.Length; ++j)
+        {
+            // set lambda to zero again
+            constraints[j].ResetLambda();
         }
     }
 
