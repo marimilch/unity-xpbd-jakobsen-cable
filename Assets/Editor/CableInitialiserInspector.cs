@@ -38,9 +38,7 @@ public class CableInitialiserInspector : Editor
 			CatmullSpline.CreateCatmullSpline(cps),
 			cps.Length,
 			inbetweenRes
-		)
-
-		;
+		);
 
 		//Draw line between each point in world space
 		Handles.DrawAAPolyLine(

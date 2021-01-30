@@ -1,158 +1,131 @@
 ﻿using System;
 using Functional;
-using UnityEngine;
 using NumericalVectors;
+using UnityEngine;
 using ArrayTools;
 
-public class Constraint
+class Constraint
 {
-    //the constraint function itself
-    Returns<float>.Expects<Vector3[]> f;
+    // from the paper
+    int cardinality;
+    bool equal;
+    float stiffness;
 
-    //satisfied if equal or unequal to zero
-    bool equal = true;
+    //xpbd
+    float lambda = 0f;
+    bool extended;
 
-    int cardinality = 1;
+    Returns<float>.Expects<Vector3[]> constraintFunction;
+    Returns<Vector3[]>.Expects<Vector3[]> constraintSatisfier;
+    Returns<Vector3[]>.Expects<Vector3[]> nabla;
 
-    float stiffness = .5f;
-
-    //internal vars
-    float currentTotalLagrange = 0f;
-
-    float alpha_snake = 0f;
-
-    //output vars
-    float deltaLambda;
-    Vector3[] deltaXsFull;
+    void BaseInit(
+        int cardinality_,
+        Returns<float>.Expects<Vector3[]> constraintFunction_,
+        float stiffness_ = 1f,
+        bool equal_ = true,
+        bool extended_ = true
+    )
+    {
+        stiffness = stiffness_;
+        equal = equal_;
+        cardinality = cardinality_;
+        constraintFunction = constraintFunction_;
+        extended = extended_;
+    }
 
     public Constraint(
-        Returns<float>.Expects<Vector3[]> f,
-        bool equal,
-        int cardinality,
-        float stiffness
+        int cardinality_,
+        Returns<float>.Expects<Vector3[]> constraintFunction_,
+        float stiffness_ = 1f,
+        bool equal_ = true,
+        bool extended_ = true
     )
     {
-        this.f = f;
-        this.equal = equal;
-        this.cardinality = cardinality;
-        this.stiffness = stiffness;
-
-        //calculate internals
-        alpha_snake = stiffness / (Time.fixedDeltaTime * Time.fixedDeltaTime);
+        BaseInit(cardinality_, constraintFunction_, stiffness_, equal_, extended_);
+        CreateNablaAndSolver();
     }
 
-    //project to all vertices
-    public void ProjectContraintsAll(ref Rigidbody[] rbsAll)
+    public Constraint(
+        int cardinality_,
+        Returns<float>.Expects<Vector3[]> constraintFunction_,
+        Returns<Vector3[]>.Expects<Vector3[]> constraintSatisfier_,
+        float stiffness_ = 1f,
+        bool equal_ = true,
+        bool extended_ = true
+    )
     {
-        for (int i = 0; i <= rbsAll.Length - cardinality; ++i)
+        BaseInit(cardinality_, constraintFunction_, stiffness_, equal_, extended_);
+        constraintSatisfier = constraintSatisfier_;
+    }
+
+    public void ProjectConstraint(int i, ref Vector3[] ps)
+    {
+        //ensure required points available
+        if (RequirePoints(cardinality, i, ref ps)) return;
+
+        var vs = Arr<Vector3>.Extract(ps, i, cardinality, false);
+
+        //equality constraint?
+        if (!equal && constraintFunction(vs) < 0f) return;
+
+        var newVs = constraintSatisfier(vs);
+
+        for (int j = 0; j < cardinality; ++j)
         {
-            
-            var deltaXs = ProjectConstraint(
-                Arr<Rigidbody>.Extract(rbsAll, i, cardinality)
-            );
-
-            //Debug.Log(deltaXs[0] + " " + deltaXs[1]);
-
-            ApplyDeltaXFrom(ref rbsAll, ref deltaXs, i);
+            ps[i + j] = newVs[j];
         }
     }
 
-    void ApplyDeltaXFrom(
-        ref Rigidbody[] rbsAll,
-        ref Vector3[] deltaXs,
-        int offset
-    )
+    void CreateNablaAndSolver()
     {
-        for (int i = 0; i < deltaXs.Length; ++i)
-        {
-            //Debug.Log("before " + rbsAll[i + offset].transform.position);
-            rbsAll[i + offset].MovePosition(
-                 rbsAll[i + offset].transform.position + deltaXs[i]
-            );
-
-            //Debug.Log("before " + rbsAll[i + offset].transform.position);
-
-        }
-    }
-
-    //project only to cardinal vertices
-    Vector3[] ProjectConstraint(Rigidbody[] rbs)
-    {
-        var xis = GetLocations(rbs);
-        var cxi = Derivates.Nabla(f, xis.Length)(xis);
-        var cm = ApplyMassDivision(rbs, cxi);
-        var cmc = ScalarEach(
-            cm,
-            cxi
+        nabla = Derivatives.Nabla(
+            constraintFunction,
+            cardinality
         );
 
-        //Debug.Log(-f(xis) + " result.");
-        deltaLambda = (-f(xis) - alpha_snake * currentTotalLagrange) /
-            (cmc + alpha_snake);
-
-        //Debug.Log(deltaLambda + " check");
-
-        var deltaXs = Returns<Vector3>.Map<Vector3>(cm, (v) =>
+        constraintSatisfier = (vs) =>
         {
-            //return v;
-            return v * deltaLambda;
-        });
+            //get directional nablas
+            var directionalNablas = nabla(vs);
 
-        currentTotalLagrange += deltaLambda;
+            //catch zero (no projection needed then)
+            var sum = SumOfVectorsQuad(directionalNablas);
+            if (sum == 0f)
+            {
+                return vs;
+            }
 
-        return deltaXs;
+            var s = constraintFunction(vs) / sum;
+
+            //for each point, that the constraint checks now
+            for (int i = 0; i < cardinality; i++)
+            {
+                vs[i] -= s * directionalNablas[i];
+            }
+
+            return vs;
+        };
     }
 
-    Vector3[] GetLocations(Rigidbody[] rbs)
+    float SumOfVectorsQuad(Vector3[] vs)
     {
-        var len = rbs.Length;
-        var rs = new Vector3[len];
-
-        for (int i = 0; i < len; i++)
+        var result = 0f;
+        foreach (var v in vs)
         {
-
-            rs[i] = rbs[i].transform.position;
+            result += v.sqrMagnitude;
         }
 
-        return rs;
+        return result;
     }
 
-    float ScalarEach(Vector3[] xis, Vector3[] yis)
+    bool RequirePoints(int n, int i, ref Vector3[] ps)
     {
-        var r = 0f;
-        var lenYis = yis.Length;
-        var lenXis = xis.Length;
-
-        if (lenYis != lenXis)
+        if (i + n <= ps.Length)
         {
-            throw new UnityException("yis and xis lengths do not match");
+            return false;
         }
 
-        for (int i = 0; i < lenXis; ++i)
-        {
-            r += Vector3.Dot(xis[i], yis[i]);
-        }
-
-        return r;
-    }
-
-    Vector3[] ApplyMassDivision(Rigidbody[] rbs, Vector3[] xis)
-    {
-        var lenRbs = rbs.Length;
-        var lenXis = xis.Length;
-
-        if (lenRbs != lenXis)
-        {
-            throw new UnityException("rbs and xis lengths do not match");
-        }
-
-        var rs = new Vector3[lenXis];
-
-        for (int i = 0; i < lenXis; ++i)
-        {
-            rs[i] = xis[i] / rbs[i].mass;
-        }
-
-        return rs;
+        return true;
     }
 }

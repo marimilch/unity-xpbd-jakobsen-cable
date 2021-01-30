@@ -27,4 +27,9 @@ namespace Functional
             return Map<T>(ts, map_);
         }
     }
+
+    public class Voids
+    {
+        public delegate void ExpectsRRef<T1, T2>(T1 t1, ref T2 t2);
+    }
 }

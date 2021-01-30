@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace NumericalVectors
 {
-    public class Derivates
+    public class Derivatives
     {
         public static Returns<float>.Expects<float> Derivative(
             Returns<float>.Expects<float> f,
