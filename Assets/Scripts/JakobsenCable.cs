@@ -102,20 +102,29 @@ public class JakobsenCable : MonoBehaviour, Cable
         maxVelocity = v;
     }
 
-    void Start()
+    private void Awake()
     {
-        var line = GetComponent<CableInitialiser>();
         numberOfParticles = GetNumberOfParticles();
 
-        AddCollisionHelper();
-
-        //all except player
-        layerMask = ~LayerMask.GetMask(ignoreLayer);
+        var line = GetComponent<CableInitialiser>();
 
         currentXs = SplineTools.AliasFunction(
             CatmullSpline.CreateCatmullSpline(line.controlPoints),
             resolution
         );
+
+        previousXs = new Vector3[numberOfParticles];
+        constrainedPositions = new Vector3[numberOfParticles];
+        constraintPositionLevel = new int[numberOfParticles];
+
+    }
+
+    void Start()
+    {
+        AddCollisionHelper();
+
+        //all except player
+        layerMask = ~LayerMask.GetMask(ignoreLayer);
 
         var cableLength = SplineTools.GetFunLength(currentXs);
         restDistance = cableLength / (float)resolution;
@@ -128,9 +137,6 @@ public class JakobsenCable : MonoBehaviour, Cable
             );
         }
 
-        previousXs = new Vector3[numberOfParticles];
-        constrainedPositions = new Vector3[numberOfParticles];
-        constraintPositionLevel = new int[numberOfParticles];
         //accelerations = new Vector3[numberOfParticles];
 
         currentXs.CopyTo(previousXs, 0);
@@ -142,9 +148,6 @@ public class JakobsenCable : MonoBehaviour, Cable
 
         dt = Time.fixedDeltaTime;
         dt_squared = dt * dt;
-
-        constrainedPositions[0] = Vector3.zero;
-        constraintPositionLevel[0] = 1;
     }
 
     void AddCollisionHelper()

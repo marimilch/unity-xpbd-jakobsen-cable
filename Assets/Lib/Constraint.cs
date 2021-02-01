@@ -139,26 +139,9 @@ class Constraint
             {
                 //recalculated, so it can be changed live
                 var alphaSnake = 1f / (deltaTSquared *
-                    (minStiffnessExt + stiffness * (maxStiffnessExt-minStiffnessExt))
+                    (minStiffnessExt + XPBDStiffness())
                 );
 
-                //assume next iteration started, if zero
-                //if (particleIndex == 0)
-                //{
-                //    //do not add s on first run, only when finished
-                //    if (firstRun)
-                //    {
-                //        firstRun = false;
-                //        lambda = 0f;
-                //    }
-                //    else
-                //    {
-                //        lambda += XPBDScale(ref vs, alphaSnake, sum);
-                //    }
-                //}
-
-                //recalculate because of new lambda
-                //Debug.Log(particleIndex);
                 s = XPBDScale(ref vs, alphaSnake, sum);
 
                 lambdas[particleIndex] += s;
@@ -167,7 +150,7 @@ class Constraint
                 s = -stiffness * constraintFunction(vs) / sum;
             }
 
-            //for each point, that the constraint checks now
+            //correct each particle's position
             for (int i = 0; i < cardinality; i++)
             {
                 vs[i] += s * directionalNablas[i];
@@ -181,6 +164,11 @@ class Constraint
     {
         return (-constraintFunction(vs) - alphaSnake * lambdas[particleIndex]) /
                     (sum + alphaSnake);
+    }
+
+    float XPBDStiffness()
+    {
+        return stiffness * (maxStiffnessExt - minStiffnessExt);
     }
 
     float SumOfVectorsQuad(Vector3[] vs)

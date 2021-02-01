@@ -56,6 +56,8 @@ namespace NumericalVectors
             float epsilon = .01f
         )
         {
+            //arity * 3, because we need the 
+            //partial derivative for each coordinate
             var arity3 = arity * 3;
             var nabla = new Returns<float>.Expects<Vector3[]>[arity3];
 
